@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Sheet — DM Setting</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/shared.css" />
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      
+      <span></span>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-email" id="user-email">—</div>
+    </div>
+    <div id="sidebar-footer"></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="page-title">DM Setting</div>
+          <div class="page-subtitle">Track outreach, replies and bookings</div>
+        </div>
+      </div>
+      <button id="add-btn">＋ Add record</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search setting…" />
+      </div>
+      <div class="date-filter">
+        <label>From</label>
+        <input type="date" id="filter-from" />
+        <label>To</label>
+        <input type="date" id="filter-to" />
+        <button class="btn-filter apply" id="apply-dates">Apply</button>
+        <button class="btn-filter" id="clear-dates">Clear</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div id="page-error"></div>
+      <div id="table-loading"><div class="spinner"></div> Loading…</div>
+      <div id="table-wrap" style="display:none">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-overlay"></div>
+  <div id="form-panel">
+    <div class="panel-header">
+      <span id="form-title">Add record</span>
+      <button id="panel-close">✕</button>
+    </div>
+    <div class="panel-body">
+      <div id="form-fields"></div>
+    </div>
+    <div class="panel-footer">
+      <button id="form-submit">Save record</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { renderNav }   from './js/nav.js';
+    import { TablePage }   from './js/table.js';
+
+    await requireAuth();
+    renderNav('setting');
+
+    const page = new TablePage({
+      table: 'dm_setting',
+      defaultSort: 'date',
+      columns: [
+        { key: 'date',               label: 'Date',            type: 'date' },
+        { key: 'setter',             label: 'Setter',          type: 'text' },
+        { key: 'setting_type',       label: 'Type',            type: 'text' },
+        { key: 'outbounds',          label: 'Outbounds/Calls', type: 'number' },
+        { key: 'inbounds',           label: 'Inbounds',        type: 'number' },
+        { key: 'follow_ups_first',   label: 'Follow Ups',      type: 'number' },
+        { key: 'replies',            label: 'Replies/Pick Ups',type: 'number' },
+        { key: 'qualified_convos',   label: 'Qual. Convos',    type: 'number' },
+        { key: 'pitched_calls',      label: 'Pitched',         type: 'number' },
+        { key: 'qualified_bookings', label: 'Calls Booked',    type: 'number' },
+        { key: 'dq_bookings',        label: 'DQ Bookings',     type: 'number' },
+      ],
+      formFields: [
+        { key: 'date',               label: 'Date',                    type: 'date' },
+        { key: 'setter',             label: 'Setter Name',             type: 'text' },
+        { key: 'setting_type',       label: 'DM / Phone Setting',      options: ['DM Setting', 'Phone Setting'] },
+        { key: 'outbounds',          label: 'Outbounds / Calls Made',  type: 'number' },
+        { key: 'inbounds',           label: 'Inbounds',                type: 'number' },
+        { key: 'follow_ups_first',   label: 'Follow Ups',              type: 'number' },
+        { key: 'follow_ups_convo',   label: 'Follow Ups (In Convo)',   type: 'number' },
+        { key: 'replies',            label: 'Replies / Pick Ups',      type: 'number' },
+        { key: 'qualified_convos',   label: 'Qualified Convos',        type: 'number' },
+        { key: 'pitched_calls',      label: 'Pitched Calls',           type: 'number' },
+        { key: 'booking_links_sent', label: 'Booking Links Sent',      type: 'number' },
+        { key: 'qualified_bookings', label: 'Calls Booked',            type: 'number' },
+        { key: 'dq_bookings',        label: 'DQ Bookings',             type: 'number' },
+        { key: 'notes',              label: 'Notes',                   type: 'textarea' },
+      ],
+    });
+
+    await page.init();
+  </script>
+</body>
+</html>

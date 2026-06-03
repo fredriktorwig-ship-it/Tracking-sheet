@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Sheet — FU Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/shared.css" />
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <span></span>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-email" id="user-email">—</div>
+    </div>
+    <div id="sidebar-footer"></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="page-title">FU Tracker</div>
+          <div class="page-subtitle">Track leads and follow-up activity</div>
+        </div>
+      </div>
+      <button id="add-btn">＋ Add lead</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input type="text" id="search-input" placeholder="Search leads…" />
+      </div>
+      <div class="date-filter">
+        <label>Next FU from</label>
+        <input type="date" id="filter-from" />
+        <label>to</label>
+        <input type="date" id="filter-to" />
+        <button class="btn-filter apply" id="apply-dates">Apply</button>
+        <button class="btn-filter" id="clear-dates">Clear</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div id="page-error"></div>
+      <div id="table-loading"><div class="spinner"></div> Loading…</div>
+      <div id="table-wrap" style="display:none">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-overlay"></div>
+  <div id="form-panel">
+    <div class="panel-header">
+      <span id="form-title">Add lead</span>
+      <button id="panel-close">✕</button>
+    </div>
+    <div class="panel-body">
+      <div id="form-fields"></div>
+    </div>
+    <div class="panel-footer">
+      <button id="form-submit">Save lead</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { renderNav }   from './js/nav.js';
+    import { TablePage }   from './js/table.js';
+
+    await requireAuth();
+    renderNav('fu-tracker');
+
+    const page = new TablePage({
+      table: 'fu_tracker',
+      defaultSort: 'date_next_followup',
+      columns: [
+        { key: 'lead_name',          label: 'Lead Name',      type: 'text' },
+        { key: 'contact_person',     label: 'Contact',        type: 'text' },
+        { key: 'lead_ig',            label: 'IG Handle',      type: 'text' },
+        { key: 'lead_quality',       label: 'Quality (1-10)', type: 'number' },
+        { key: 'date_last_contact',  label: 'Last Contact',   type: 'date' },
+        { key: 'date_next_followup', label: 'Next FU',        type: 'date' },
+        { key: 'next_step',          label: 'Next Step',      type: 'text' },
+      ],
+      formFields: [
+        { key: 'lead_name',          label: 'Lead Name',            type: 'text' },
+        { key: 'contact_person',     label: 'Contact Person',       type: 'text' },
+        { key: 'lead_ig',            label: 'Lead IG Handle',       type: 'text' },
+        { key: 'lead_pn',            label: 'Lead Phone Number',    type: 'text' },
+        { key: 'lead_email',         label: 'Lead Email',           type: 'text' },
+        { key: 'lead_quality',       label: 'Lead Quality (1-10)',  type: 'number' },
+        { key: 'date_last_contact',  label: 'Date of Last Contact', type: 'date' },
+        { key: 'date_next_followup', label: 'Date of Next Follow Up', type: 'date' },
+        { key: 'next_step',          label: 'Next Step',            type: 'text' },
+        { key: 'notes',              label: 'Notes',                type: 'textarea' },
+      ],
+    });
+
+    await page.init();
+  </script>
+</body>
+</html>

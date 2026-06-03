@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Sheet — Workspaces</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/shared.css" />
+  <style>
+    .admin-wrap { padding: 24px 28px; max-width: 860px; }
+
+    /* Create workspace form */
+    .new-ws-form { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; display: flex; gap: 10px; align-items: flex-end; }
+    .new-ws-form .field { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .new-ws-form label { font-size: 12px; font-weight: 500; color: var(--text2); }
+    .new-ws-form input { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 13.5px; outline: none; }
+    .new-ws-form input:focus { border-color: var(--accent); }
+    .btn-primary { padding: 9px 18px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-primary:hover { opacity: .88; }
+
+    /* Workspace cards */
+    .ws-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+    .ws-card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .ws-card-name { font-size: 15px; font-weight: 600; }
+    .ws-card-sub  { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
+
+    /* Tabs inside card */
+    .card-tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .card-tab { padding: 10px 18px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: .15s; }
+    .card-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .card-tab-pane { display: none; padding: 16px 20px; }
+    .card-tab-pane.active { display: block; }
+
+    /* Members */
+    .members-list { display: flex; flex-direction: column; gap: 8px; }
+    .member-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: var(--surface2); border-radius: 8px; font-size: 13px; }
+    .member-email { color: var(--text2); font-size: 12.5px; }
+    .member-role-badge { font-size: 11px; padding: 2px 9px; border-radius: 10px; font-weight: 500; background: rgba(22,163,74,.1); color: #16a34a; }
+    .member-role-badge.admin { background: rgba(59,130,246,.1); color: #3b82f6; }
+    .member-role-badge.closer { background: rgba(139,92,246,.1); color: #7c3aed; }
+    .member-role-badge.operator { background: rgba(234,179,8,.1); color: #a16207; }
+    .member-role-badge.client { background: rgba(239,68,68,.1); color: #dc2626; }
+
+    /* Invite form */
+    .invite-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .invite-form .field { display: flex; flex-direction: column; gap: 4px; }
+    .invite-form .field.grow { flex: 1; min-width: 180px; }
+    .invite-form label { font-size: 11.5px; font-weight: 500; color: var(--text2); }
+    .invite-form input, .invite-form select {
+      padding: 8px 11px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 13px; outline: none;
+    }
+    .invite-form input:focus, .invite-form select:focus { border-color: var(--accent); }
+
+    /* Pending invites */
+    .pending-invite { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; font-size: 13px; margin-bottom: 8px; }
+    .pending-email { font-weight: 500; }
+    .pending-role { font-size: 11px; color: #92400e; margin-left: 8px; }
+    .invite-link-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; font-family: monospace; color: var(--text2); cursor: pointer; word-break: break-all; margin-top: 6px; }
+    .invite-link-box:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Buttons */
+    .btn-sm { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-family: 'Inter', sans-serif; font-size: 12px; cursor: pointer; transition: .15s; }
+    .btn-sm:hover { background: var(--surface2); color: var(--text); }
+    .btn-sm.danger { color: var(--red); border-color: rgba(220,38,38,.2); }
+    .btn-sm.danger:hover { background: var(--red-bg); }
+    .btn-sm.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-sm.accent:hover { opacity: .88; }
+
+    /* Messages */
+    .msg { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: none; }
+    .msg.ok  { background: rgba(22,163,74,.08);  color: #15803d; border: 1px solid rgba(22,163,74,.2); }
+    .msg.err { background: var(--red-bg); color: var(--red); border: 1px solid rgba(220,38,38,.2); }
+
+    .section-label { font-size: 11.5px; font-weight: 600; color: var(--text2); margin-bottom: 10px; }
+    .empty-text { color: var(--text3); font-size: 13px; padding: 8px 0; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <span></span>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-email" id="user-email">—</div>
+    </div>
+    <div id="sidebar-footer"></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="page-title">Workspaces</div>
+          <div class="page-subtitle">Manage clients and team members</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-wrap">
+      <div id="msg" class="msg"></div>
+
+      <!-- Create new workspace -->
+      <div class="new-ws-form">
+        <div class="field">
+          <label>New Workspace Name</label>
+          <input type="text" id="ws-name-input" placeholder="e.g. Client 1" />
+        </div>
+        <button class="btn-primary" id="create-ws-btn">+ Create Workspace</button>
+      </div>
+
+      <div id="ws-list"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth, getUser } from './js/auth.js';
+    import { renderNav } from './js/nav.js';
+    import { sb } from './js/supabase.js';
+
+    await requireAuth();
+    await renderNav('admin');
+
+    const ROLES = ['admin', 'operator', 'closer', 'DM setter', 'Phone Setter', 'VA', 'client'];
+    const siteUrl = location.origin + location.pathname.replace('admin.html','');
+
+    const msgEl = document.getElementById('msg');
+    function showMsg(text, type='ok') {
+      msgEl.textContent = text;
+      msgEl.className = 'msg ' + type;
+      msgEl.style.display = 'block';
+      setTimeout(() => msgEl.style.display = 'none', 4000);
+    }
+
+    function roleBadge(role) {
+      const cls = ['admin','closer','operator','client'].includes(role) ? role : '';
+      return `<span class="member-role-badge ${cls}">${role}</span>`;
+    }
+
+    async function loadWorkspaces() {
+      const user = await getUser();
+      const { data, error } = await sb
+        .from('workspace_members')
+        .select('workspace_id, role, workspaces(id, name)')
+        .eq('user_id', user.id);
+
+      if (error) { showMsg(error.message, 'err'); return; }
+
+      const workspaces = (data||[]).map(m => ({ id: m.workspaces?.id, name: m.workspaces?.name, myRole: m.role })).filter(w=>w.id);
+      const list = document.getElementById('ws-list');
+
+      if (!workspaces.length) {
+        list.innerHTML = '<p class="empty-text">No workspaces yet. Create one above.</p>';
+        return;
+      }
+
+      list.innerHTML = '';
+
+      for (const ws of workspaces) {
+        const isAdmin = ws.myRole === 'admin';
+
+        // Load members + pending invites
+        const [{ data: members }, { data: invites }] = await Promise.all([
+          sb.rpc('get_workspace_members', { ws_id: ws.id }),
+          isAdmin ? sb.from('pending_invites').select('*').eq('workspace_id', ws.id) : { data: [] }
+        ]);
+
+        const card = document.createElement('div');
+        card.className = 'ws-card';
+        card.innerHTML = `
+          <div class="ws-card-header">
+            <div>
+              <div class="ws-card-name">${ws.name}</div>
+              <div class="ws-card-sub">${(members||[]).length} member${(members||[]).length!==1?'s':''}</div>
+            </div>
+            ${isAdmin ? `<button class="btn-sm danger" data-delete="${ws.id}">Delete</button>` : ''}
+          </div>
+
+          <div class="card-tabs">
+            <div class="card-tab active" data-ws="${ws.id}" data-ctab="members">Members</div>
+            ${isAdmin ? `<div class="card-tab" data-ws="${ws.id}" data-ctab="invite">Invite</div>` : ''}
+            ${isAdmin ? `<div class="card-tab" data-ws="${ws.id}" data-ctab="pending">Pending (${(invites||[]).length})</div>` : ''}
+            ${isAdmin ? `<div class="card-tab" data-ws="${ws.id}" data-ctab="forms">Forms & Webhooks</div>` : ''}
+          </div>
+
+          <!-- Members tab -->
+          <div class="card-tab-pane active" id="cpane-members-${ws.id}">
+            <div class="members-list">
+              ${(members||[]).length ? (members||[]).map(m => `
+                <div class="member-row">
+                  <span class="member-email">${m.email || m.user_id}</span>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    ${roleBadge(m.role)}
+                    ${isAdmin ? `<button class="btn-sm danger" data-remove="${m.user_id}" data-ws="${ws.id}">Remove</button>` : ''}
+                  </div>
+                </div>
+              `).join('') : '<div class="empty-text">No members yet.</div>'}
+            </div>
+          </div>
+
+          <!-- Invite tab -->
+          ${isAdmin ? `
+          <div class="card-tab-pane" id="cpane-invite-${ws.id}">
+            <div class="section-label">Send invite link</div>
+            <div class="invite-form">
+              <div class="field grow">
+                <label>Email address</label>
+                <input type="email" id="invite-email-${ws.id}" placeholder="teammate@example.com" />
+              </div>
+              <div class="field">
+                <label>Role</label>
+                <select id="invite-role-${ws.id}">
+                  ${ROLES.map(r=>`<option value="${r}">${r.charAt(0).toUpperCase()+r.slice(1)}</option>`).join('')}
+                </select>
+              </div>
+              <button class="btn-sm accent" data-invite="${ws.id}">Generate invite link</button>
+            </div>
+            <div id="invite-result-${ws.id}" style="margin-top:10px;display:none">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px">Share this link with them:</div>
+              <div class="invite-link-box" id="invite-link-${ws.id}" title="Click to copy"></div>
+            </div>
+          </div>` : ''}
+
+          <!-- Pending invites tab -->
+          ${isAdmin ? `
+          <div class="card-tab-pane" id="cpane-pending-${ws.id}">
+            <div id="pending-list-${ws.id}">
+              ${(invites||[]).length ? (invites||[]).map(inv => `
+                <div class="pending-invite">
+                  <div>
+                    <span class="pending-email">${inv.email}</span>
+                    <span class="pending-role">${inv.role}</span>
+                  </div>
+                  <button class="btn-sm danger" data-cancel="${inv.id}">Cancel</button>
+                </div>
+              `).join('') : '<div class="empty-text">No pending invites.</div>'}
+            </div>
+          </div>` : ''}
+
+          <!-- Forms & Webhooks tab -->
+          ${isAdmin ? `
+          <div class="card-tab-pane" id="cpane-forms-${ws.id}">
+
+            <div class="section-label" style="margin-bottom:12px">Daily submission links — share these in Discord</div>
+
+            <div style="margin-bottom:18px">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px">DM Setting Form</div>
+              <div class="invite-link-box" data-copy="${siteUrl}form-setting.html?workspace=${ws.id}">${siteUrl}form-setting.html?workspace=${ws.id}</div>
+            </div>
+
+            <div style="margin-bottom:24px">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px">Ads Form</div>
+              <div class="invite-link-box" data-copy="${siteUrl}form-ads.html?workspace=${ws.id}">${siteUrl}form-ads.html?workspace=${ws.id}</div>
+            </div>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin-bottom:20px" />
+
+            <div class="section-label" style="margin-bottom:12px">Zapier webhook URLs — paste your Zapier "Catch Hook" URL here</div>
+
+            <div class="invite-form" style="flex-direction:column;gap:12px">
+              <div class="field" style="width:100%">
+                <label>DM Setting → Discord webhook</label>
+                <div style="display:flex;gap:8px">
+                  <input type="url" id="wh-setting-${ws.id}" placeholder="https://hooks.zapier.com/hooks/catch/…" style="flex:1" />
+                  <button class="btn-sm accent" data-save-wh="${ws.id}" data-wh-type="setting">Save</button>
+                </div>
+              </div>
+              <div class="field" style="width:100%">
+                <label>Ads → Discord webhook</label>
+                <div style="display:flex;gap:8px">
+                  <input type="url" id="wh-ads-${ws.id}" placeholder="https://hooks.zapier.com/hooks/catch/…" style="flex:1" />
+                  <button class="btn-sm accent" data-save-wh="${ws.id}" data-wh-type="ads">Save</button>
+                </div>
+              </div>
+            </div>
+          </div>` : ''}
+        `;
+
+        list.appendChild(card);
+      }
+
+      // ── Bind all events ──
+
+      // Card tab switching
+      list.querySelectorAll('.card-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const wsId = tab.dataset.ws;
+          const pane = tab.dataset.ctab;
+          list.querySelectorAll(`[data-ws="${wsId}"].card-tab`).forEach(t=>t.classList.remove('active'));
+          list.querySelectorAll(`[id^="cpane-"][id$="-${wsId}"]`).forEach(p=>p.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(`cpane-${pane}-${wsId}`)?.classList.add('active');
+        });
+      });
+
+      // Delete workspace
+      list.querySelectorAll('[data-delete]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this workspace? This cannot be undone.')) return;
+          const { error } = await sb.from('workspaces').delete().eq('id', btn.dataset.delete);
+          if (error) showMsg(error.message, 'err');
+          else { showMsg('Workspace deleted'); loadWorkspaces(); }
+        });
+      });
+
+      // Remove member
+      list.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Remove this member?')) return;
+          const { error } = await sb.from('workspace_members').delete()
+            .eq('workspace_id', btn.dataset.ws).eq('user_id', btn.dataset.remove);
+          if (error) showMsg(error.message, 'err');
+          else { showMsg('Member removed'); loadWorkspaces(); }
+        });
+      });
+
+      // Generate invite link
+      list.querySelectorAll('[data-invite]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const wsId  = btn.dataset.invite;
+          const email = document.getElementById('invite-email-' + wsId)?.value.trim();
+          const role  = document.getElementById('invite-role-'  + wsId)?.value;
+          if (!email) { showMsg('Enter an email address', 'err'); return; }
+          const user = await getUser();
+          const { data, error } = await sb.from('pending_invites')
+            .insert({ workspace_id: wsId, email, role, invited_by: user.id })
+            .select().single();
+          if (error) { showMsg(error.message, 'err'); return; }
+          const link = `${siteUrl}join.html?token=${data.token}`;
+          const box  = document.getElementById('invite-link-' + wsId);
+          const res  = document.getElementById('invite-result-' + wsId);
+          box.textContent = link;
+          res.style.display = 'block';
+          box.addEventListener('click', () => {
+            navigator.clipboard.writeText(link);
+            showMsg('Invite link copied!');
+          });
+          document.getElementById('invite-email-' + wsId).value = '';
+          loadWorkspaces(); // refresh pending count
+        });
+      });
+
+      // Cancel invite
+      list.querySelectorAll('[data-cancel]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const { error } = await sb.from('pending_invites').delete().eq('id', btn.dataset.cancel);
+          if (error) showMsg(error.message, 'err');
+          else { showMsg('Invite cancelled'); loadWorkspaces(); }
+        });
+      });
+
+      // Copy form links
+      list.querySelectorAll('[data-copy]').forEach(box => {
+        box.addEventListener('click', () => {
+          navigator.clipboard.writeText(box.dataset.copy);
+          showMsg('Link copied!');
+        });
+      });
+
+      // Load existing webhook URLs into inputs
+      for (const ws of workspaces) {
+        if (ws.myRole !== 'admin') continue;
+        const { data: wsData } = await sb.from('workspaces').select('webhook_setting, webhook_ads').eq('id', ws.id).single();
+        if (wsData?.webhook_setting) {
+          const el = document.getElementById('wh-setting-' + ws.id);
+          if (el) el.value = wsData.webhook_setting;
+        }
+        if (wsData?.webhook_ads) {
+          const el = document.getElementById('wh-ads-' + ws.id);
+          if (el) el.value = wsData.webhook_ads;
+        }
+      }
+
+      // Save webhook URLs
+      list.querySelectorAll('[data-save-wh]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const wsId = btn.dataset.saveWh;
+          const type = btn.dataset.whType; // 'setting' or 'ads'
+          const val  = document.getElementById(`wh-${type}-${wsId}`)?.value.trim();
+          const col  = type === 'setting' ? 'webhook_setting' : 'webhook_ads';
+          const { error } = await sb.from('workspaces').update({ [col]: val || null }).eq('id', wsId);
+          if (error) showMsg(error.message, 'err');
+          else showMsg('Webhook URL saved!');
+        });
+      });
+    }
+
+    // Create workspace
+    document.getElementById('create-ws-btn').addEventListener('click', async () => {
+      const name = document.getElementById('ws-name-input').value.trim();
+      if (!name) return;
+      const user = await getUser();
+      const { data: ws, error } = await sb.from('workspaces').insert({ name, owner_id: user.id }).select().single();
+      if (error) { showMsg(error.message, 'err'); return; }
+      await sb.from('workspace_members').insert({ workspace_id: ws.id, user_id: user.id, role: 'admin' });
+      document.getElementById('ws-name-input').value = '';
+      showMsg('Workspace "' + name + '" created!');
+      loadWorkspaces();
+    });
+
+    loadWorkspaces();
+  </script>
+</body>
+</html>

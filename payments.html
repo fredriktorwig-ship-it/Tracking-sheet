@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Sheet — Payments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/shared.css" />
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      
+      <span></span>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-email" id="user-email">—</div>
+    </div>
+    <div id="sidebar-footer"></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="page-title">Payments</div>
+          <div class="page-subtitle">Track cash collected and renewals</div>
+        </div>
+      </div>
+      <button id="add-btn">＋ Add record</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search payments…" />
+      </div>
+      <div class="date-filter">
+        <label>From</label>
+        <input type="date" id="filter-from" />
+        <label>To</label>
+        <input type="date" id="filter-to" />
+        <button class="btn-filter apply" id="apply-dates">Apply</button>
+        <button class="btn-filter" id="clear-dates">Clear</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div id="page-error"></div>
+      <div id="table-loading"><div class="spinner"></div> Loading…</div>
+      <div id="table-wrap" style="display:none">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-overlay"></div>
+  <div id="form-panel">
+    <div class="panel-header">
+      <span id="form-title">Add record</span>
+      <button id="panel-close">✕</button>
+    </div>
+    <div class="panel-body">
+      <div id="form-fields"></div>
+    </div>
+    <div class="panel-footer">
+      <button id="form-submit">Save record</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { renderNav }   from './js/nav.js';
+    import { TablePage }   from './js/table.js';
+
+    await requireAuth();
+    renderNav('payments');
+
+    const page = new TablePage({
+      table: 'payments',
+      defaultSort: 'date',
+      columns: [
+        { key: 'date',          label: 'Date',         type: 'date' },
+        { key: 'customer_name', label: 'Customer',     type: 'text' },
+        { key: 'amount',        label: 'Amount',       type: 'currency' },
+        { key: 'type',          label: 'Type',         type: 'text', options: ['New Sale','Renewal'] },
+        { key: 'payment_type',  label: 'Payment Type', type: 'text', options: ['Deposit','PIF','Payment Plan'] },
+        { key: 'setter',        label: 'Setter',       type: 'text' },
+        { key: 'closer',        label: 'Closer',       type: 'text' },
+      ],
+      formFields: [
+        { key: 'date',          label: 'Date',         type: 'date' },
+        { key: 'customer_name', label: 'Customer Name',type: 'text' },
+        { key: 'amount',        label: 'Amount (£)',   type: 'currency' },
+        { key: 'type',          label: 'Type',         type: 'text', options: ['New Sale','Renewal'] },
+        { key: 'payment_type',  label: 'Payment Type', type: 'text', options: ['Deposit','PIF','Payment Plan'] },
+        { key: 'setter',        label: 'Setter',       type: 'text' },
+        { key: 'closer',        label: 'Closer',       type: 'text' },
+        { key: 'notes',         label: 'Notes',        type: 'textarea' },
+      ],
+    });
+
+    await page.init();
+  </script>
+</body>
+</html>

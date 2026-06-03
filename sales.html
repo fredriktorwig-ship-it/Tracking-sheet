@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Sheet — Sales</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/shared.css" />
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      
+      <span></span>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-email" id="user-email">—</div>
+    </div>
+    <div id="sidebar-footer"></div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="page-title">Sales</div>
+          <div class="page-subtitle">Track calls, closes and payments</div>
+        </div>
+      </div>
+      <button id="add-btn">＋ Add record</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search sales…" />
+      </div>
+      <div class="date-filter">
+        <label>From</label>
+        <input type="date" id="filter-from" />
+        <label>To</label>
+        <input type="date" id="filter-to" />
+        <button class="btn-filter apply" id="apply-dates">Apply</button>
+        <button class="btn-filter" id="clear-dates">Clear</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div id="page-error"></div>
+      <div id="table-loading"><div class="spinner"></div> Loading…</div>
+      <div id="table-wrap" style="display:none">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-in panel -->
+  <div id="panel-overlay"></div>
+  <div id="form-panel">
+    <div class="panel-header">
+      <span id="form-title">Add record</span>
+      <button id="panel-close">✕</button>
+    </div>
+    <div class="panel-body">
+      <div id="form-fields"></div>
+    </div>
+    <div class="panel-footer">
+      <button id="form-submit">Save record</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { renderNav }   from './js/nav.js';
+    import { TablePage }   from './js/table.js';
+
+    await requireAuth();
+    renderNav('sales');
+
+    const page = new TablePage({
+      table: 'sales',
+      defaultSort: 'date_of_call',
+      columns: [
+        { key: 'date_of_call',  label: 'Date',         type: 'date' },
+        { key: 'lead_name',     label: 'Lead',         type: 'text' },
+        { key: 'closer',        label: 'Closer',       type: 'text' },
+        { key: 'call_type',     label: 'Call Type',    type: 'text', options: ['Sales Call','Follow Up Call'] },
+        { key: 'call_info',     label: 'Call Info',    type: 'text', options: ['Live Call','No Show','Cancelled'] },
+        { key: 'closed',        label: 'Closed?',      type: 'text', options: ['Yes','No','Fu'] },
+        { key: 'deal_size',     label: 'Deal Size',    type: 'currency' },
+        { key: 'cash_on_call',  label: 'Cash on Call', type: 'currency' },
+        { key: 'payment_type',  label: 'Payment Type', type: 'text', options: ['Deposit','Split','PIF'] },
+        { key: 'utm_source',    label: 'UTM Source',   type: 'text' },
+      ],
+      formFields: [
+        { key: 'lead_name',     label: 'Lead Name',    type: 'text' },
+        { key: 'closer',        label: 'Closer',       type: 'text' },
+        { key: 'date_booked',   label: 'Date Booked',  type: 'date' },
+        { key: 'date_of_call',  label: 'Date of Call', type: 'date' },
+        { key: 'call_type',     label: 'Call Type',    type: 'text', options: ['Sales Call','Follow Up Call'] },
+        { key: 'call_info',     label: 'Call Info',    type: 'text', options: ['Live Call','No Show','Cancelled'] },
+        { key: 'closed',        label: 'Closed?',      type: 'text', options: ['Yes','No','Fu'] },
+        { key: 'deal_size',     label: 'Deal Size (£)', type: 'currency' },
+        { key: 'cash_on_call',  label: 'Cash on Call (£)', type: 'currency' },
+        { key: 'payment_type',  label: 'Payment Type', type: 'text', options: ['Deposit','Split','PIF'] },
+        { key: 'utm_source',    label: 'UTM Source',   type: 'text' },
+        { key: 'notes',         label: 'Notes',        type: 'textarea' },
+      ],
+    });
+
+    await page.init();
+  </script>
+</body>
+</html>

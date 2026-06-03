@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Sheet — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/shared.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── Dashboard overrides ── */
+    .main { background: var(--bg); }
+
+    .dash-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .dash-title { font-size: 20px; font-weight: 600; color: var(--text); }
+
+    /* Presets */
+    .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-chip {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text2); font-family: 'Inter', sans-serif;
+      font-size: 12.5px; font-weight: 500; cursor: pointer;
+      transition: .15s;
+    }
+    .preset-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .preset-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .custom-range { display: flex; align-items: center; gap: 6px; }
+    .custom-range input[type="date"] {
+      padding: 6px 9px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px; outline: none;
+    }
+    .custom-range input[type="date"]:focus { border-color: var(--accent); }
+    .btn-apply {
+      padding: 6px 12px; border-radius: 7px;
+      border: 1px solid var(--accent); background: var(--accent);
+      color: #fff; font-family: 'Inter', sans-serif;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .btn-apply:hover { opacity: .88; }
+
+    /* Tabs */
+    .dash-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      background: var(--surface);
+      gap: 0;
+    }
+    .dash-tab {
+      padding: 13px 18px; font-size: 13.5px; font-weight: 500;
+      color: var(--text2); cursor: pointer;
+      border-bottom: 2px solid transparent; transition: .15s; user-select: none;
+    }
+    .dash-tab:hover { color: var(--text); }
+    .dash-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Content area */
+    .dash-content { padding: 26px 28px; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+
+    .dash-loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 80px; gap: 10px; color: var(--text2); font-size: 14px;
+    }
+
+    /* ── Stat cards ── */
+    .stats-grid {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+    .stat-card.highlight {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+    .stat-label {
+      font-size: 12px; font-weight: 500;
+      margin-bottom: 8px; line-height: 1.3;
+    }
+    .stat-value {
+      font-size: 30px; font-weight: 600; line-height: 1;
+    }
+    .stat-value.md { font-size: 24px; }
+    .stat-value.sm { font-size: 20px; }
+
+    /* Colour classes for labels + values */
+    .c-green  { color: #15803d; }
+    .c-red    { color: #991b1b; }
+    .c-purple { color: #4338ca; }
+    .c-amber  { color: #92400e; }
+    .c-blue   { color: #1e40af; }
+    .c-dark   { color: var(--text); }
+    .c-slate  { color: #334155; }
+
+    /* Chart cards */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .chart-card h3 {
+      font-size: 13px; font-weight: 600; color: var(--text2);
+      margin-bottom: 16px;
+    }
+    .chart-wrap { position: relative; }
+    .chart-wrap.pie-wrap {
+      display: flex; align-items: center; justify-content: center;
+      gap: 40px;
+    }
+    .pie-canvas { max-width: 220px; max-height: 220px; }
+    .pie-legend { display: flex; flex-direction: column; gap: 8px; }
+    .pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+    .pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Divider */
+    .sect-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+    /* Responsive tweaks */
+    @media (max-width: 900px) {
+      .cols-4 { grid-template-columns: repeat(2, 1fr); }
+      .cols-3 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      
+      <span></span>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-email" id="user-email">—</div>
+    </div>
+    <div id="sidebar-footer"></div>
+  </aside>
+
+  <div class="main">
+
+    <!-- Top bar -->
+    <div class="dash-topbar">
+      <div class="dash-title">Dashboard</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="presets">
+          <button class="preset-chip" data-preset="7d">7 days</button>
+          <button class="preset-chip" data-preset="30d">30 days</button>
+          <button class="preset-chip active" data-preset="mtd">MTD</button>
+          <button class="preset-chip" data-preset="all">All time</button>
+        </div>
+        <div class="custom-range">
+          <input type="date" id="custom-from" />
+          <span style="color:var(--text3);font-size:12px">→</span>
+          <input type="date" id="custom-to" />
+          <button class="btn-apply" id="apply-custom">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="dash-tabs">
+      <div class="dash-tab active" data-tab="sales">Sales Stats</div>
+      <div class="dash-tab" data-tab="payments">Cash Collected</div>
+      <div class="dash-tab" data-tab="setting">DM Setting</div>
+      <div class="dash-tab" data-tab="ads">Ad Numbers</div>
+      <div class="dash-tab" data-tab="organic">Organic</div>
+      <div class="dash-tab" data-tab="vsl">VSL Numbers</div>
+    </div>
+
+    <!-- Content -->
+    <div class="dash-content">
+
+      <!-- ══ SALES STATS ══ -->
+      <div class="tab-section active" id="tab-sales">
+        <div id="sales-loading" class="dash-loading"><div class="spinner"></div> Loading…</div>
+        <div id="sales-metrics" style="display:none"></div>
+      </div>
+
+      <!-- ══ CASH COLLECTED ══ -->
+      <div class="tab-section" id="tab-payments">
+        <div id="payments-loading" class="dash-loading"><div class="spinner"></div> Loading…</div>
+        <div id="payments-metrics" style="display:none"></div>
+      </div>
+
+      <!-- ══ DM SETTING ══ -->
+      <div class="tab-section" id="tab-setting">
+        <div id="setting-loading" class="dash-loading"><div class="spinner"></div> Loading…</div>
+        <div id="setting-metrics" style="display:none"></div>
+      </div>
+
+      <!-- ══ ADS ══ -->
+      <div class="tab-section" id="tab-ads">
+        <div id="ads-loading" class="dash-loading"><div class="spinner"></div> Loading…</div>
+        <div id="ads-metrics" style="display:none"></div>
+      </div>
+
+      <!-- ══ ORGANIC ══ -->
+      <div class="tab-section" id="tab-organic">
+        <div id="organic-loading" class="dash-loading"><div class="spinner"></div> Loading…</div>
+        <div id="organic-metrics" style="display:none"></div>
+      </div>
+
+      <!-- ══ VSL ══ -->
+      <div class="tab-section" id="tab-vsl">
+        <div id="vsl-loading" class="dash-loading"><div class="spinner"></div> Loading…</div>
+        <div id="vsl-metrics" style="display:none"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    // NOTE: The admin.html add-member feature requires a Supabase Edge Function or
+    // the get_user_id_by_email RPC. For now, admins add members via Supabase dashboard.
+    import { requireAuth } from './js/auth.js';
+    import { renderNav }   from './js/nav.js';
+    import { sb }          from './js/supabase.js';
+    import { getActiveWorkspace } from './js/workspace.js';
+
+    await requireAuth();
+    renderNav('dashboard'); // don't await — sidebar loads in parallel
+
+    /* ── Helpers ── */
+    let dateFrom = null, dateTo = null;
+
+    const isoDate  = d => d.toISOString().slice(0,10);
+    const isoToday = () => isoDate(new Date());
+    const num = v => Number(v) || 0;
+    const pct = (n,d) => d ? (n/d*100).toFixed(2)+'%' : '0.00%';
+    const gbp = v => '£' + num(v).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const fmtN = v => num(v).toLocaleString('en-GB');
+    const card = (label, value, colorClass='c-dark', highlight=false, size='') =>
+      `<div class="stat-card${highlight?' highlight':''}">
+        <div class="stat-label ${colorClass}">${label}</div>
+        <div class="stat-value ${size} ${colorClass}">${value}</div>
+      </div>`;
+
+    async function fetchRange(table, dateCol='date') {
+      try {
+        let q = sb.from(table).select('*');
+        if (dateFrom) q = q.gte(dateCol, dateFrom);
+        if (dateTo)   q = q.lte(dateCol, dateTo);
+        const wsId = getActiveWorkspace();
+        if (wsId) q = q.eq('workspace_id', wsId);
+        const { data, error } = await q;
+        if (error) { console.warn(`[${table}]`, error.message); return []; }
+        return data || [];
+      } catch(e) {
+        console.warn(`[${table}]`, e.message);
+        return [];
+      }
+    }
+
+    /* ══ SALES ══ */
+    let utmChartInst = null;
+    async function loadSales() {
+      const el = document.getElementById('sales-metrics');
+      document.getElementById('sales-loading').style.display = 'flex';
+      el.style.display = 'none';
+
+      const sales = await fetchRange('sales', 'date_of_call');
+
+      const live      = sales.filter(r => r.call_info === 'Live Call').length;
+      const noShow    = sales.filter(r => r.call_info === 'No Show').length;
+      const cancelled = sales.filter(r => r.call_info === 'Cancelled').length;
+      const total     = sales.length;
+      const closed    = sales.filter(r => r.closed === 'Yes').length;
+      const fu        = sales.filter(r => r.closed === 'Fu').length;
+
+      const totalRevenue  = sales.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size||r.cash_on_call),0);
+      const cashOnCall    = sales.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.cash_on_call),0);
+      const avgDealSize   = closed ? totalRevenue/closed : 0;
+      const avgCashOnCall = closed ? cashOnCall/closed : 0;
+
+      const closeRate    = live    ? (closed/live*100).toFixed(2)+'%' : '0.00%';
+      const showRate     = (live+noShow+cancelled) ? (live/(live+noShow+cancelled)*100).toFixed(1)+'%' : '0.00%';
+      const noShowRate   = (live+noShow+cancelled) ? (noShow/(live+noShow+cancelled)*100).toFixed(2)+'%' : '0.00%';
+      const cancelRate   = (live+noShow+cancelled) ? (cancelled/(live+noShow+cancelled)*100).toFixed(2)+'%' : '0.00%';
+
+      const pif     = sales.filter(r=>r.closed==='Yes'&&r.payment_type==='PIF').length;
+      const pifRate = closed ? (pif/closed*100).toFixed(0)+'%' : '0%';
+
+      // UTM breakdown
+      const utmMap = {};
+      sales.forEach(r => {
+        const u = r.utm_source || 'Unknown';
+        utmMap[u] = (utmMap[u]||0)+1;
+      });
+      const utmLabels = Object.keys(utmMap);
+      const utmData   = Object.values(utmMap);
+      const utmColors = ['#4338ca','#3b7ef8','#16a34a','#d97706','#dc2626','#7c3aed','#0891b2','#be185d'];
+
+      el.innerHTML = `
+        <div class="stats-grid cols-2">
+          ${card('Total Revenue', gbp(totalRevenue), 'c-green')}
+          ${card('Total Cash on Call', gbp(cashOnCall), 'c-green')}
+        </div>
+        <div class="stats-grid cols-2">
+          ${card('Close Rate', closeRate, 'c-green', true)}
+          ${card('Deals Closed', fmtN(closed), 'c-dark')}
+        </div>
+        <div class="stats-grid cols-4">
+          ${card('Total Calls Booked', fmtN(total), 'c-purple')}
+          ${card('Live Calls', fmtN(live), 'c-dark')}
+          ${card('No Shows', fmtN(noShow), 'c-red')}
+          ${card('Cancelled', fmtN(cancelled), 'c-amber')}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('Show Rate', showRate, 'c-green')}
+          ${card('No Show Rate', noShowRate, 'c-red')}
+          ${card('Cancelled Rate', cancelRate, 'c-amber')}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('Booked for Follow Up', fmtN(fu), 'c-amber')}
+          ${card("PIF's", fmtN(pif), 'c-dark')}
+          ${card('PIF Rate', pifRate, 'c-amber')}
+        </div>
+        <div class="stats-grid cols-2">
+          ${card('Average Deal Size', gbp(avgDealSize), 'c-dark')}
+          ${card('Average Cash on Call', gbp(avgCashOnCall), 'c-dark')}
+        </div>
+
+        ${utmLabels.length ? `
+        <div class="chart-card">
+          <h3>Calls from UTM Source</h3>
+          <div class="chart-wrap pie-wrap">
+            <canvas class="pie-canvas" id="utm-chart"></canvas>
+            <div class="pie-legend" id="utm-legend"></div>
+          </div>
+        </div>` : ''}
+      `;
+
+      document.getElementById('sales-loading').style.display = 'none';
+      el.style.display = 'block';
+
+      if (utmLabels.length) {
+        if (utmChartInst) utmChartInst.destroy();
+        const ctx = document.getElementById('utm-chart').getContext('2d');
+        utmChartInst = new Chart(ctx, {
+          type: 'pie',
+          data: { labels: utmLabels, datasets: [{ data: utmData, backgroundColor: utmColors.slice(0,utmLabels.length), borderWidth: 2, borderColor: '#fff' }] },
+          options: { plugins: { legend: { display: false } }, responsive: true }
+        });
+        const leg = document.getElementById('utm-legend');
+        leg.innerHTML = utmLabels.map((l,i) => {
+          const pct = total ? (utmData[i]/total*100).toFixed(1) : 0;
+          return `<div class="pie-legend-item"><div class="pie-dot" style="background:${utmColors[i%utmColors.length]}"></div><span style="color:var(--text2)">${l}</span><span style="font-weight:600;color:var(--text)">${pct}%</span></div>`;
+        }).join('');
+      }
+    }
+
+    /* ══ PAYMENTS / CASH COLLECTED ══ */
+    let payChartInst = null;
+    async function loadPayments() {
+      const el = document.getElementById('payments-metrics');
+      document.getElementById('payments-loading').style.display = 'flex';
+      el.style.display = 'none';
+
+      const payments = await fetchRange('payments', 'date');
+
+      const total     = payments.reduce((s,r) => s+num(r.amount), 0);
+      const newSales  = payments.filter(r=>r.type==='New Sale').reduce((s,r)=>s+num(r.amount),0);
+      const renewals  = payments.filter(r=>r.type==='Renewal').reduce((s,r)=>s+num(r.amount),0);
+
+      // Group by date for line chart
+      const byDate = {};
+      payments.forEach(r => {
+        const d = r.date || r.created_at?.slice(0,10) || 'Unknown';
+        byDate[d] = (byDate[d]||0) + num(r.amount);
+      });
+      const sortedDates = Object.keys(byDate).sort();
+      const chartAmounts = sortedDates.map(d => byDate[d]);
+
+      el.innerHTML = `
+        <div class="stats-grid cols-3" style="margin-bottom:12px">
+          ${card('Total Cash Collected', gbp(total), 'c-green', true)}
+          ${card('New Sales', gbp(newSales), 'c-green')}
+          ${card('Renewals', gbp(renewals), 'c-blue')}
+        </div>
+        ${sortedDates.length ? `
+        <div class="chart-card">
+          <h3>Cash Collected Over Time</h3>
+          <div class="chart-wrap" style="height:280px">
+            <canvas id="pay-chart"></canvas>
+          </div>
+        </div>` : ''}
+      `;
+
+      document.getElementById('payments-loading').style.display = 'none';
+      el.style.display = 'block';
+
+      if (sortedDates.length) {
+        if (payChartInst) payChartInst.destroy();
+        const ctx = document.getElementById('pay-chart').getContext('2d');
+        payChartInst = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: sortedDates.map(d => new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short'})),
+            datasets: [{
+              data: chartAmounts,
+              borderColor: '#16a34a',
+              backgroundColor: 'rgba(22,163,74,.08)',
+              borderWidth: 2.5,
+              pointBackgroundColor: '#16a34a',
+              pointRadius: 4,
+              fill: true,
+              tension: 0.3,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: {
+              callbacks: { label: ctx => ' £' + ctx.parsed.y.toLocaleString('en-GB',{minimumFractionDigits:2}) }
+            }},
+            scales: {
+              x: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 }, color: '#94a3b8', maxRotation: 45 } },
+              y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 }, color: '#94a3b8', callback: v => '£'+v.toLocaleString() } }
+            }
+          }
+        });
+      }
+    }
+
+    /* ══ DM SETTING ══ */
+    async function loadSetting() {
+      const el = document.getElementById('setting-metrics');
+      document.getElementById('setting-loading').style.display = 'flex';
+      el.style.display = 'none';
+
+      const rows = await fetchRange('dm_setting', 'date');
+      const sum = k => rows.reduce((s,r)=>s+num(r[k]),0);
+
+      const outbounds       = sum('outbounds');
+      const inbounds        = sum('inbounds');
+      const fuFirst         = sum('follow_ups_first');
+      const fuConvo         = sum('follow_ups_convo');
+      const replies         = sum('replies');
+      const qualConvos      = sum('qualified_convos');
+      const pitchedCalls    = sum('pitched_calls');
+      const bookingLinks    = sum('booking_links_sent');
+      const qualBookings    = sum('qualified_bookings');
+      const dqBookings      = sum('dq_bookings');
+      const totalOutreach   = outbounds + inbounds + fuFirst;
+
+      // Rates
+      const apptBookingRate  = pct(qualBookings, totalOutreach);
+      const qualBookingRate  = pct(qualBookings, qualBookings+dqBookings);
+      const replyRate        = pct(replies, totalOutreach);
+      const replyToQual      = pct(qualConvos, replies);
+      const qualToPitch      = pct(pitchedCalls, qualConvos);
+      const pitchToLink      = pct(bookingLinks, pitchedCalls);
+      const linkToBooked     = pct(qualBookings, bookingLinks);
+
+      el.innerHTML = `
+        <div class="stats-grid cols-2">
+          ${card('Total Appointment Booking Rate', apptBookingRate, 'c-green', true)}
+          ${card('Qualified Booking Rate', qualBookingRate, 'c-green')}
+        </div>
+        <div class="stats-grid cols-2">
+          ${card('Qualified Bookings', fmtN(qualBookings), 'c-green')}
+          ${card('DQ Bookings', fmtN(dqBookings), 'c-red')}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('First Message Reply Rate', replyRate, 'c-purple')}
+          ${card('Reply to Qualified Convo', replyToQual, 'c-purple')}
+          ${card('Qualified Convo to Pitch', qualToPitch, 'c-purple')}
+        </div>
+        <div class="stats-grid cols-2">
+          ${card('Pitch to Booking Link', pitchToLink, 'c-purple')}
+          ${card('Booking Link to Booked Call', linkToBooked, 'c-purple')}
+        </div>
+        <hr class="sect-divider" />
+        <div class="stats-grid cols-4">
+          ${card('Outbounds', fmtN(outbounds), 'c-dark')}
+          ${card('Inbounds', fmtN(inbounds), 'c-dark')}
+          ${card('Follow Ups (FM)', fmtN(fuFirst), 'c-dark')}
+          ${card('Follow Ups (IC)', fmtN(fuConvo), 'c-dark')}
+        </div>
+        <div class="stats-grid cols-4">
+          ${card('Replies', fmtN(replies), 'c-dark')}
+          ${card('Qualified Convos', fmtN(qualConvos), 'c-dark')}
+          ${card('Pitched Calls', fmtN(pitchedCalls), 'c-dark')}
+          ${card('Booking Links Sent', fmtN(bookingLinks), 'c-dark')}
+        </div>
+      `;
+
+      document.getElementById('setting-loading').style.display = 'none';
+      el.style.display = 'block';
+    }
+
+    /* ══ ADS ══ */
+    async function loadAds() {
+      const el = document.getElementById('ads-metrics');
+      document.getElementById('ads-loading').style.display = 'flex';
+      el.style.display = 'none';
+
+      const rows = await fetchRange('ads', 'date');
+      const sum = k => rows.reduce((s,r)=>s+num(r[k]),0);
+
+      const adSpend        = sum('ad_spend');
+      const profileVisits  = sum('profile_visits');
+      const totalFollowers = sum('total_followers');
+      const qualFollowers  = sum('qualified_followers');
+      const inbounds       = sum('inbounds');
+      const outbounds      = sum('outbounds');
+      const replies        = sum('replies');
+      const qualConvos     = sum('qualified_convos');
+      const pitchedCalls   = sum('pitched_calls');
+      const bookingLinks   = sum('booking_links_sent');
+      const bookedCalls    = sum('booked_calls');
+
+      const totalDMs       = inbounds + outbounds;
+      const fmt2 = v => v ? '£'+num(v).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}) : '∞';
+
+      const cpBookedCall  = bookedCalls    ? adSpend/bookedCalls    : null;
+      const cpFollow      = totalFollowers ? adSpend/totalFollowers  : null;
+      const cpQualFollow  = qualFollowers  ? adSpend/qualFollowers   : null;
+      const cpQualConvo   = qualConvos     ? adSpend/qualConvos      : null;
+      const cpInbound     = inbounds       ? adSpend/inbounds        : null;
+
+      const visitToFollow   = profileVisits   ? pct(totalFollowers, profileVisits)  : '∞';
+      const qualFollowRate  = pct(qualFollowers, totalFollowers);
+      const replyRate       = pct(replies, totalDMs);
+      const replyToQual     = pct(qualConvos, replies);
+      const qualToPitch     = pct(pitchedCalls, qualConvos);
+      const pitchToLink     = pct(bookingLinks, pitchedCalls);
+      const linkToBooked    = pct(bookedCalls, bookingLinks);
+
+      el.innerHTML = `
+        <div class="stats-grid cols-3">
+          ${card('Total Ad Spend', gbp(adSpend), 'c-red')}
+          ${card('Cost per Booked Call', fmt2(cpBookedCall), 'c-green')}
+          ${card('Booked Calls', fmtN(bookedCalls), 'c-green', true)}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('Profile Visits from Ads', fmtN(profileVisits), 'c-purple')}
+          ${card('Followers from Ads', fmtN(totalFollowers), 'c-purple')}
+          ${card('Qualified Followers from Ads', fmtN(qualFollowers), 'c-purple')}
+        </div>
+        <div class="stats-grid cols-4">
+          ${card('Cost per Follow', fmt2(cpFollow), 'c-amber')}
+          ${card('Cost per Qualified Follow', fmt2(cpQualFollow), 'c-amber')}
+          ${card('Cost per Qualified Convo', fmt2(cpQualConvo), 'c-amber')}
+          ${card('Cost per Inbound', fmt2(cpInbound), 'c-amber')}
+        </div>
+        <div class="stats-grid cols-4">
+          ${card('Visit to Follow', visitToFollow, 'c-purple')}
+          ${card('Qualified Follow Rate', qualFollowRate, 'c-purple')}
+          ${card('Reply Rate', replyRate, 'c-purple')}
+          ${card('Reply to Qualified Convo', replyToQual, 'c-purple')}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('Qualified Convo to Pitch', qualToPitch, 'c-purple')}
+          ${card('Pitch to Booking Link Sent', pitchToLink, 'c-purple')}
+          ${card('Booking Link Sent to Call Booked', linkToBooked, 'c-purple')}
+        </div>
+        <hr class="sect-divider" />
+        <div class="stats-grid cols-3">
+          ${card('Outbounds', fmtN(outbounds), 'c-dark')}
+          ${card('Inbounds', fmtN(inbounds), 'c-dark')}
+          ${card('Replies', fmtN(replies), 'c-dark')}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('Qualified Convos', fmtN(qualConvos), 'c-dark')}
+          ${card('Pitched Calls', fmtN(pitchedCalls), 'c-dark')}
+          ${card('Booking Links Sent', fmtN(bookingLinks), 'c-dark')}
+        </div>
+      `;
+
+      document.getElementById('ads-loading').style.display = 'none';
+      el.style.display = 'block';
+    }
+
+    /* ══ VSL ══ */
+    async function loadVsl() {
+      const el = document.getElementById('vsl-metrics');
+      document.getElementById('vsl-loading').style.display = 'flex';
+      el.style.display = 'none';
+
+      const rows = await fetchRange('vsl', 'date');
+      const sum = k => rows.reduce((s,r)=>s+num(r[k]),0);
+
+      const visitors    = sum('unique_visitors');
+      const optIns      = sum('opt_ins');
+      const callsBooked = sum('calls_booked');
+
+      const optInRate    = pct(optIns, visitors);
+      const convFromOpt  = pct(callsBooked, optIns);
+      const convTotal    = pct(callsBooked, visitors);
+
+      el.innerHTML = `
+        <div class="stats-grid cols-3">
+          ${card('Total Unique Visitors', fmtN(visitors), 'c-dark')}
+          ${card('Total Opt-Ins', fmtN(optIns), 'c-dark')}
+          ${card('Total Calls Booked', fmtN(callsBooked), 'c-green', true)}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('Opt In Rate', optInRate, 'c-amber')}
+          ${card('VSL Conversion Rate (From Opt-Ins)', convFromOpt, 'c-purple')}
+          ${card('VSL Conversion Rate (Total)', convTotal, 'c-green')}
+        </div>
+      `;
+
+      document.getElementById('vsl-loading').style.display = 'none';
+      el.style.display = 'block';
+    }
+
+    /* ══ ORGANIC ══ */
+    async function loadOrganic() {
+      const el = document.getElementById('organic-metrics');
+      document.getElementById('organic-loading').style.display = 'flex';
+      el.style.display = 'none';
+
+      const rows = await fetchRange('organic', 'date');
+
+      if (!rows.length) {
+        el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text2);font-size:14px">No organic data yet for this period.</div>`;
+        document.getElementById('organic-loading').style.display = 'none';
+        el.style.display = 'block';
+        return;
+      }
+
+      // Sort by date ascending for growth calc
+      const sorted = [...rows].sort((a,b) => new Date(a.date) - new Date(b.date));
+      const latest = sorted[sorted.length - 1];
+      const earliest = sorted[0];
+
+      const totalFollowersNow  = num(latest.total_followers);
+      const icpFollowersNow    = num(latest.icp_followers);
+      const totalFollowersThen = num(earliest.total_followers);
+      const icpFollowersThen   = num(earliest.icp_followers);
+
+      const totalGrowth = totalFollowersNow - totalFollowersThen;
+      const icpGrowth   = icpFollowersNow   - icpFollowersThen;
+      const icpRate     = pct(icpFollowersNow, totalFollowersNow);
+
+      const fmtGrowth = v => (v >= 0 ? '+' : '') + fmtN(v);
+
+      el.innerHTML = `
+        <div class="stats-grid cols-2">
+          ${card('Total Followers', fmtN(totalFollowersNow), 'c-green', true)}
+          ${card('ICP Followers', fmtN(icpFollowersNow), 'c-purple', true)}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('ICP Follower Rate', icpRate, 'c-green')}
+          ${card('Total Follower Growth', fmtGrowth(totalGrowth), totalGrowth >= 0 ? 'c-green' : 'c-red')}
+          ${card('ICP Follower Growth', fmtGrowth(icpGrowth), icpGrowth >= 0 ? 'c-green' : 'c-red')}
+        </div>
+        <hr class="sect-divider" />
+        <div class="stats-grid cols-4">
+          ${rows.slice(0,8).map(r => card(new Date(r.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}), fmtN(num(r.total_followers)) + ' total · ' + fmtN(num(r.icp_followers)) + ' ICP', 'c-dark')).join('')}
+        </div>
+      `;
+
+      document.getElementById('organic-loading').style.display = 'none';
+      el.style.display = 'block';
+    }
+
+    /* ── Tab switching ── */
+    let activeTab = 'sales';
+    const loaders = { sales: loadSales, payments: loadPayments, setting: loadSetting, ads: loadAds, organic: loadOrganic, vsl: loadVsl };
+    const loaded  = new Set();
+
+    async function loadAll() {
+      loaded.clear();
+      await loadTab(activeTab);
+    }
+    async function loadTab(tab) {
+      if (loaded.has(tab)) return;
+      loaded.add(tab);
+      try { await loaders[tab](); } catch(e) {
+        console.error(tab, e);
+        // Hide any stuck spinner and show error
+        document.getElementById(tab + '-loading')?.style && (document.getElementById(tab + '-loading').style.display = 'none');
+        const m = document.getElementById(tab + '-metrics');
+        if (m) { m.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;font-size:14px">Could not load data: ${e.message}</div>`; m.style.display = 'block'; }
+      }
+    }
+
+    document.querySelectorAll('.dash-tab').forEach(t => {
+      t.addEventListener('click', async () => {
+        document.querySelectorAll('.dash-tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-section').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        activeTab = t.dataset.tab;
+        document.getElementById('tab-' + activeTab)?.classList.add('active');
+        await loadTab(activeTab);
+      });
+    });
+
+    /* ── Date presets ── */
+    function applyPreset(preset) {
+      document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+      document.querySelector(`[data-preset="${preset}"]`)?.classList.add('active');
+      const now = new Date();
+      if (preset === '7d')  { const f=new Date(now); f.setDate(f.getDate()-6); dateFrom=isoDate(f); dateTo=isoToday(); }
+      else if (preset==='30d') { const f=new Date(now); f.setDate(f.getDate()-29); dateFrom=isoDate(f); dateTo=isoToday(); }
+      else if (preset==='mtd') { dateFrom=isoDate(new Date(now.getFullYear(),now.getMonth(),1)); dateTo=isoToday(); }
+      else { dateFrom=null; dateTo=null; }
+      document.getElementById('custom-from').value = dateFrom||'';
+      document.getElementById('custom-to').value   = dateTo||'';
+      loadAll();
+    }
+
+    document.querySelectorAll('.preset-chip').forEach(c => c.addEventListener('click', () => applyPreset(c.dataset.preset)));
+
+    document.getElementById('apply-custom').addEventListener('click', () => {
+      const f = document.getElementById('custom-from').value;
+      const t = document.getElementById('custom-to').value;
+      if (!f && !t) return;
+      dateFrom = f||null; dateTo = t||null;
+      document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+      loadAll();
+    });
+
+    applyPreset('mtd');
+  </script>
+</body>
+</html>

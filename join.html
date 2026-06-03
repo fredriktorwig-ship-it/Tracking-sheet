@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join Workspace</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4f6f9; --surface: #fff; --border: #e2e6ed;
+      --accent: #16a34a; --text: #0f1117; --text2: #64748b;
+      --red: #e53e3e; --red-bg: rgba(229,62,62,.08);
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; -webkit-font-smoothing: antialiased; }
+    .wrap { width: 100%; max-width: 420px; padding: 24px; }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo-icon { width: 48px; height: 48px; border-radius: 14px; background: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+    .logo h1 { font-size: 20px; font-weight: 700; }
+    .logo p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .invite-badge { background: rgba(22,163,74,.08); border: 1px solid rgba(22,163,74,.2); border-radius: 10px; padding: 14px 16px; margin-bottom: 22px; }
+    .invite-badge .ws-name { font-size: 16px; font-weight: 600; color: #15803d; }
+    .invite-badge .role { font-size: 12px; color: #15803d; margin-top: 4px; }
+    .tabs { display: flex; gap: 0; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .tab { flex: 1; padding: 9px; text-align: center; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text2); background: var(--bg); transition: .15s; border: none; font-family: 'Inter', sans-serif; }
+    .tab.active { background: var(--surface); color: var(--text); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+    input { width: 100%; padding: 10px 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: border-color .15s; }
+    input:focus { border-color: var(--accent); }
+    .btn { width: 100%; padding: 11px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s; margin-top: 4px; }
+    .btn:hover { opacity: .88; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .error { background: var(--red-bg); border: 1px solid rgba(229,62,62,.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 14px; display: none; }
+    .loading { text-align: center; padding: 40px; color: var(--text2); font-size: 14px; }
+    .expired { text-align: center; padding: 20px 0; }
+    .expired h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .expired p { color: var(--text2); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <h1 id="app-name">Tracking Sheet</h1>
+      <p>You've been invited to a workspace</p>
+    </div>
+
+    <div class="card">
+      <div id="page-loading" class="loading">Checking invite…</div>
+      <div id="page-expired" class="expired" style="display:none">
+        <h2>Invite not found</h2>
+        <p>This invite link is invalid or has already been used.</p>
+      </div>
+      <div id="page-main" style="display:none">
+        <div class="invite-badge">
+          <div class="ws-name" id="ws-name">—</div>
+          <div class="role">Role: <strong id="ws-role">—</strong></div>
+        </div>
+        <div class="error" id="err-msg"></div>
+        <div class="tabs">
+          <button class="tab active" data-tab="login">I have an account</button>
+          <button class="tab" data-tab="signup">Create account</button>
+        </div>
+        <!-- Login -->
+        <div class="tab-pane active" id="tab-login">
+          <div class="field"><label>Email</label><input type="email" id="login-email" autocomplete="email" /></div>
+          <div class="field"><label>Password</label><input type="password" id="login-password" autocomplete="current-password" /></div>
+          <button class="btn" id="login-btn">Sign in &amp; Join</button>
+        </div>
+        <!-- Signup -->
+        <div class="tab-pane" id="tab-signup">
+          <div class="field"><label>Email</label><input type="email" id="signup-email" autocomplete="email" /></div>
+          <div class="field"><label>Password</label><input type="password" id="signup-password" autocomplete="new-password" placeholder="Min. 6 characters" /></div>
+          <button class="btn" id="signup-btn">Create account &amp; Join</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { sb } from './js/supabase.js';
+
+    const params   = new URLSearchParams(location.search);
+    const token    = params.get('token');
+    const appName  = localStorage.getItem('appName') || 'Tracking Sheet';
+    document.getElementById('app-name').textContent = appName;
+
+    let invite = null;
+
+    // Load invite
+    if (!token) {
+      show('expired');
+    } else {
+      const { data, error } = await sb.from('pending_invites')
+        .select('*, workspaces(name)')
+        .eq('token', token)
+        .single();
+
+      if (error || !data) {
+        show('expired');
+      } else {
+        invite = data;
+        document.getElementById('ws-name').textContent = data.workspaces?.name || 'Workspace';
+        document.getElementById('ws-role').textContent = data.role;
+        document.getElementById('login-email').value  = data.email;
+        document.getElementById('signup-email').value = data.email;
+        show('main');
+      }
+    }
+
+    function show(page) {
+      document.getElementById('page-loading').style.display = page === 'loading' ? 'block' : 'none';
+      document.getElementById('page-expired').style.display = page === 'expired' ? 'block' : 'none';
+      document.getElementById('page-main').style.display    = page === 'main'    ? 'block' : 'none';
+    }
+
+    function showErr(msg) {
+      const el = document.getElementById('err-msg');
+      el.textContent = msg; el.style.display = 'block';
+    }
+
+    async function joinWorkspace(userId) {
+      // Add to workspace
+      await sb.from('workspace_members').insert({
+        workspace_id: invite.workspace_id,
+        user_id: userId,
+        role: invite.role
+      });
+      // Delete invite
+      await sb.from('pending_invites').delete().eq('token', token);
+      // Store workspace and redirect
+      localStorage.setItem('activeWorkspace', invite.workspace_id);
+      window.location.href = 'dashboard.html';
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(t => {
+      t.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+        document.getElementById('err-msg').style.display = 'none';
+      });
+    });
+
+    // Login & join
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      const email = document.getElementById('login-email').value;
+      const pass  = document.getElementById('login-password').value;
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) { showErr(error.message); btn.disabled = false; btn.textContent = 'Sign in & Join'; return; }
+      await joinWorkspace(data.user.id);
+    });
+
+    // Signup & join
+    document.getElementById('signup-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('signup-btn');
+      btn.disabled = true; btn.textContent = 'Creating account…';
+      const email = document.getElementById('signup-email').value;
+      const pass  = document.getElementById('signup-password').value;
+      const { data, error } = await sb.auth.signUp({ email, password: pass });
+      if (error) { showErr(error.message); btn.disabled = false; btn.textContent = 'Create account & Join'; return; }
+      await joinWorkspace(data.user.id);
+    });
+  </script>
+</body>
+</html>
