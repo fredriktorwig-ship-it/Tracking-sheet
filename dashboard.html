@@ -115,6 +115,34 @@
 
     .sect-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
+    /* Sales filter bar */
+    .sales-filters {
+      display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;
+    }
+    .sf-group { display: flex; flex-direction: column; gap: 4px; }
+    .sf-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+    .sf-select {
+      padding: 7px 28px 7px 10px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--bg);
+      color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 13px; outline: none; cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      min-width: 130px;
+    }
+    .sf-select:focus { border-color: var(--accent); }
+    .sf-clear-btn {
+      padding: 7px 14px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text2); font-family: 'Inter', sans-serif;
+      font-size: 12.5px; font-weight: 500; cursor: pointer;
+      transition: .15s; align-self: flex-end;
+    }
+    .sf-clear-btn:hover { background: var(--surface2); color: var(--text); }
+
     .dash-loading {
       display: flex; align-items: center; justify-content: center;
       padding: 80px; gap: 10px; color: var(--text2); font-size: 14px;
@@ -245,6 +273,140 @@
       </div>`;
     }
 
+    /* ── Sales section (filterable) ── */
+    let rawSales = [];
+    let salesFilters = { callType:'', utmSource:'', utmContent:'', closer:'' };
+
+    function unique(arr, key) {
+      return [...new Set(arr.map(r=>r[key]).filter(Boolean))].sort();
+    }
+
+    function mkSelect(id, label, vals, current) {
+      const opts = ['<option value="">All</option>',
+        ...vals.map(v=>`<option value="${v}"${current===v?' selected':''}>${v}</option>`)
+      ].join('');
+      return `<div class="sf-group">
+        <label class="sf-label">${label}</label>
+        <select class="sf-select" id="${id}">${opts}</select>
+      </div>`;
+    }
+
+    function renderSalesSection(sales) {
+      const el = document.getElementById('sales-stats');
+      if (!el) return;
+
+      // Breakdown tables
+      let html = '';
+      html += mkBreakdown('Call Type',
+        ['Call Type','Count'],
+        groupBy(sales,'call_type').map(([k,v])=>[k, v.length])
+      );
+      html += mkBreakdown('UTM Source',
+        ['UTM Source','Calls','Closed','Revenue'],
+        groupBy(sales,'utm_source').map(([k,v])=>{
+          const cl = v.filter(r=>r.closed==='Yes').length;
+          const rv = v.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
+          return [k, v.length, cl, gbp(rv)];
+        })
+      );
+      html += mkBreakdown('UTM Content',
+        ['UTM Content','Calls','Closed'],
+        groupBy(sales,'utm_content').map(([k,v])=>{
+          const cl = v.filter(r=>r.closed==='Yes').length;
+          return [k, v.length, cl];
+        })
+      );
+      html += mkBreakdown('Closer',
+        ['Closer','Total Calls','Live Calls','Closed','Revenue','Close Rate'],
+        groupBy(sales,'closer').map(([k,v])=>{
+          const live   = v.filter(r=>r.call_info==='Live Call').length;
+          const closed = v.filter(r=>r.closed==='Yes').length;
+          const rev    = v.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
+          return [k, v.length, live, closed, gbp(rev), pct(closed,live)];
+        })
+      );
+
+      // Stats
+      const sLive      = sales.filter(r=>r.call_info==='Live Call').length;
+      const sNoShow    = sales.filter(r=>r.call_info==='No Show').length;
+      const sCancelled = sales.filter(r=>r.call_info==='Cancelled').length;
+      const sTotal     = sales.length;
+      const sClosed    = sales.filter(r=>r.closed==='Yes').length;
+      const sFu        = sales.filter(r=>r.closed==='Fu').length;
+      const sFinQ      = sales.filter(r=>r.financially_qualified==='Yes').length;
+      const sPif       = sales.filter(r=>r.closed==='Yes'&&r.payment_type==='PIF').length;
+      const sRevenue   = sales.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
+      const sCash      = sales.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.cash_on_call),0);
+      const sAvgDeal   = sClosed ? sRevenue/sClosed : 0;
+      const sAvgCash   = sClosed ? sCash/sClosed : 0;
+
+      html += `
+        <div class="stats-grid cols-2">
+          ${card('Total Revenue', gbp(sRevenue), 'c-green', true)}
+          ${card('Total Cash Collected', gbp(sCash), 'c-green', true)}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('Average Deal Size', gbp(sAvgDeal), 'c-dark')}
+          ${card('Average Cash on Call', gbp(sAvgCash), 'c-dark')}
+          ${card('Cash on Call Rate', pct(sCash,sRevenue), 'c-dark')}
+        </div>
+        <div class="stats-grid cols-4">
+          ${card('Close Rate', pct(sClosed,sLive), 'c-green')}
+          ${card('Show Rate', pct(sLive,sTotal), 'c-green')}
+          ${card('PIF Rate', pct(sPif,sClosed), 'c-purple')}
+          ${card('Financially Qualified Rate', pct(sFinQ,sTotal), 'c-purple')}
+        </div>
+        <div class="stats-grid cols-3">
+          ${card('No Show Rate', pct(sNoShow,sTotal), 'c-red')}
+          ${card('Cancelled / RS Rate', pct(sCancelled,sTotal), 'c-red')}
+          ${card('Booked FU Rate', pct(sFu,sTotal), 'c-amber')}
+        </div>
+        <hr class="sect-divider" />
+        <div class="stats-grid cols-4">
+          ${card('Total Calls', fmtN(sTotal), 'c-dark')}
+          ${card('Live Calls', fmtN(sLive), 'c-dark')}
+          ${card('No Shows', fmtN(sNoShow), 'c-red')}
+          ${card('Cancelled / RS', fmtN(sCancelled), 'c-red')}
+        </div>
+        <div class="stats-grid cols-4">
+          ${card('Booked FU', fmtN(sFu), 'c-amber')}
+          ${card('Deals Closed', fmtN(sClosed), 'c-green')}
+          ${card('Financially Qualified', fmtN(sFinQ), 'c-purple')}
+          ${card('PIFs', fmtN(sPif), 'c-dark')}
+        </div>`;
+
+      el.innerHTML = html;
+    }
+
+    function applyAndRender() {
+      let filtered = rawSales;
+      if (salesFilters.callType)   filtered = filtered.filter(r=>r.call_type===salesFilters.callType);
+      if (salesFilters.utmSource)  filtered = filtered.filter(r=>r.utm_source===salesFilters.utmSource);
+      if (salesFilters.utmContent) filtered = filtered.filter(r=>r.utm_content===salesFilters.utmContent);
+      if (salesFilters.closer)     filtered = filtered.filter(r=>r.closer===salesFilters.closer);
+      renderSalesSection(filtered);
+    }
+
+    function bindSalesFilters(sales) {
+      const f = (id, key) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', e => { salesFilters[key]=e.target.value; applyAndRender(); });
+      };
+      f('sf-call-type',   'callType');
+      f('sf-utm-source',  'utmSource');
+      f('sf-utm-content', 'utmContent');
+      f('sf-closer',      'closer');
+      document.getElementById('sf-clear')?.addEventListener('click', () => {
+        salesFilters = { callType:'', utmSource:'', utmContent:'', closer:'' };
+        ['sf-call-type','sf-utm-source','sf-utm-content','sf-closer'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        renderSalesSection(rawSales);
+      });
+    }
+
     /* ════════════════════════════════════
        MAIN RENDER
     ════════════════════════════════════ */
@@ -261,6 +423,9 @@
         fetchRange('payments', 'date'),
         fetchUpcomingPayments(),
       ]);
+
+      rawSales = sales;
+      salesFilters = { callType:'', utmSource:'', utmContent:'', closer:'' };
 
       const today = new Date(); today.setHours(0,0,0,0);
       const in7   = new Date(today); in7.setDate(in7.getDate()+7);
@@ -313,95 +478,20 @@
       html += `</div>`;
 
       /* ══════════════════════
-         SALES
+         SALES (with filters)
       ══════════════════════ */
       html += `<div class="section-hd">Sales</div>`;
 
-      // Breakdown: Call Type
-      html += mkBreakdown('Call Type',
-        ['Call Type','Count'],
-        groupBy(sales,'call_type').map(([k,v])=>[k, v.length])
-      );
+      // Filter bar — dropdowns populated from raw data
+      html += `<div class="sales-filters">
+        ${mkSelect('sf-call-type',   'Call Type',   unique(sales,'call_type'),   '')}
+        ${mkSelect('sf-utm-source',  'UTM Source',  unique(sales,'utm_source'),  '')}
+        ${mkSelect('sf-utm-content', 'UTM Content', unique(sales,'utm_content'), '')}
+        ${mkSelect('sf-closer',      'Closer',      unique(sales,'closer'),      '')}
+        <button class="sf-clear-btn" id="sf-clear">Clear filters</button>
+      </div>`;
 
-      // Breakdown: UTM Source
-      html += mkBreakdown('UTM Source',
-        ['UTM Source','Calls','Closed','Revenue'],
-        groupBy(sales,'utm_source').map(([k,v])=>{
-          const cl = v.filter(r=>r.closed==='Yes').length;
-          const rv = v.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
-          return [k, v.length, cl, gbp(rv)];
-        })
-      );
-
-      // Breakdown: UTM Content
-      html += mkBreakdown('UTM Content',
-        ['UTM Content','Calls','Closed'],
-        groupBy(sales,'utm_content').map(([k,v])=>{
-          const cl = v.filter(r=>r.closed==='Yes').length;
-          return [k, v.length, cl];
-        })
-      );
-
-      // Breakdown: Closer
-      html += mkBreakdown('Closer',
-        ['Closer','Total Calls','Live Calls','Closed','Revenue','Close Rate'],
-        groupBy(sales,'closer').map(([k,v])=>{
-          const live   = v.filter(r=>r.call_info==='Live Call').length;
-          const closed = v.filter(r=>r.closed==='Yes').length;
-          const rev    = v.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
-          return [k, v.length, live, closed, gbp(rev), pct(closed,live)];
-        })
-      );
-
-      // Stats
-      const sLive      = sales.filter(r=>r.call_info==='Live Call').length;
-      const sNoShow    = sales.filter(r=>r.call_info==='No Show').length;
-      const sCancelled = sales.filter(r=>r.call_info==='Cancelled').length;
-      const sTotal     = sales.length;
-      const sClosed    = sales.filter(r=>r.closed==='Yes').length;
-      const sFu        = sales.filter(r=>r.closed==='Fu').length;
-      const sFinQ      = sales.filter(r=>r.financially_qualified==='Yes').length;
-      const sPif       = sales.filter(r=>r.closed==='Yes'&&r.payment_type==='PIF').length;
-
-      const sRevenue = sales.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
-      const sCash    = sales.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.cash_on_call),0);
-      const sAvgDeal = sClosed ? sRevenue/sClosed : 0;
-      const sAvgCash = sClosed ? sCash/sClosed : 0;
-
-      html += `
-        <div class="stats-grid cols-2">
-          ${card('Total Revenue', gbp(sRevenue), 'c-green', true)}
-          ${card('Total Cash Collected', gbp(sCash), 'c-green', true)}
-        </div>
-        <div class="stats-grid cols-3">
-          ${card('Average Deal Size', gbp(sAvgDeal), 'c-dark')}
-          ${card('Average Cash on Call', gbp(sAvgCash), 'c-dark')}
-          ${card('Cash on Call Rate', pct(sCash,sRevenue), 'c-dark')}
-        </div>
-        <div class="stats-grid cols-4">
-          ${card('Close Rate', pct(sClosed,sLive), 'c-green')}
-          ${card('Show Rate', pct(sLive,sTotal), 'c-green')}
-          ${card('PIF Rate', pct(sPif,sClosed), 'c-purple')}
-          ${card('Financially Qualified Rate', pct(sFinQ,sTotal), 'c-purple')}
-        </div>
-        <div class="stats-grid cols-3">
-          ${card('No Show Rate', pct(sNoShow,sTotal), 'c-red')}
-          ${card('Cancelled / RS Rate', pct(sCancelled,sTotal), 'c-red')}
-          ${card('Booked FU Rate', pct(sFu,sTotal), 'c-amber')}
-        </div>
-        <hr class="sect-divider" />
-        <div class="stats-grid cols-4">
-          ${card('Total Calls', fmtN(sTotal), 'c-dark')}
-          ${card('Live Calls', fmtN(sLive), 'c-dark')}
-          ${card('No Shows', fmtN(sNoShow), 'c-red')}
-          ${card('Cancelled / RS', fmtN(sCancelled), 'c-red')}
-        </div>
-        <div class="stats-grid cols-4">
-          ${card('Booked FU', fmtN(sFu), 'c-amber')}
-          ${card('Deals Closed', fmtN(sClosed), 'c-green')}
-          ${card('Financially Qualified', fmtN(sFinQ), 'c-purple')}
-          ${card('PIFs', fmtN(sPif), 'c-dark')}
-        </div>`;
+      html += `<div id="sales-stats"></div>`;
 
       /* ══════════════════════
          SETTING
@@ -542,6 +632,10 @@
       document.getElementById('dash-body').innerHTML = html;
       document.getElementById('dash-loading').style.display = 'none';
       document.getElementById('dash-body').style.display = 'block';
+
+      // Render sales stats and bind filter dropdowns
+      renderSalesSection(rawSales);
+      bindSalesFilters(rawSales);
     }
 
     /* ── Date presets ── */
