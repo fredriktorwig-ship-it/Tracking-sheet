@@ -106,7 +106,6 @@ export async function renderNav(activeId) {
   const hasMultiple  = workspaces.length > 1;
 
   // Build sidebar header: workspace logo + name + optional dropdown
-  const logoRow  = sidebar.querySelector('.sidebar-logo');
   const logoIcon = sidebar.querySelector('.logo-icon');
   const logoSpan = sidebar.querySelector('.sidebar-logo span');
 
