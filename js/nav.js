@@ -14,18 +14,20 @@ const ICONS = {
   chevron:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>`,
   organic:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/><path d="M12 12C12 7 7 4 2 4c0 4 3.5 8 10 8z"/><path d="M12 12c0-5 5-8 10-8c0 4-3.5 8-10 8z"/></svg>`,
   fu:        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/></svg>`,
+  upcoming:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
 };
 
 const PAGES = [
-  { id: 'dashboard', label: 'Dashboard',  icon: 'dashboard', href: 'dashboard.html' },
-  { id: 'sales',     label: 'Sales',       icon: 'sales',     href: 'sales.html' },
-  { id: 'payments',  label: 'Payments',    icon: 'payments',  href: 'payments.html' },
-  { id: 'setting',    label: 'DM Setting',  icon: 'setting',   href: 'setting.html' },
-  { id: 'ads',        label: 'Profile Ads', icon: 'ads',       href: 'ads.html' },
-  { id: 'organic',    label: 'Organic',     icon: 'organic',   href: 'organic.html' },
-  { id: 'vsl',        label: 'VSL',         icon: 'vsl',       href: 'vsl.html' },
-  { id: 'fu-tracker', label: 'FU Tracker',  icon: 'fu',        href: 'fu-tracker.html' },
-  { id: 'admin',      label: 'Workspaces',  icon: 'admin',     href: 'admin.html' },
+  { id: 'dashboard',          label: 'Dashboard',          icon: 'dashboard', href: 'dashboard.html' },
+  { id: 'sales',              label: 'Sales',               icon: 'sales',     href: 'sales.html' },
+  { id: 'payments',           label: 'Payments',            icon: 'payments',  href: 'payments.html' },
+  { id: 'upcoming-payments',  label: 'Upcoming Payments',   icon: 'upcoming',  href: 'upcoming-payments.html' },
+  { id: 'setting',            label: 'DM Setting',          icon: 'setting',   href: 'setting.html' },
+  { id: 'ads',                label: 'Profile Ads',         icon: 'ads',       href: 'ads.html' },
+  { id: 'organic',            label: 'Organic',             icon: 'organic',   href: 'organic.html' },
+  { id: 'vsl',                label: 'Landing Page',        icon: 'vsl',       href: 'vsl.html' },
+  { id: 'fu-tracker',         label: 'FU Tracker',          icon: 'fu',        href: 'fu-tracker.html' },
+  { id: 'admin',              label: 'Workspaces',          icon: 'admin',     href: 'admin.html' },
 ];
 
 // App name stored in localStorage

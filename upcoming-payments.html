@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Sheet — Upcoming Payments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/shared.css" />
+  <style>
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-upcoming { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-overdue  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .badge-today    { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text2);
+      font-size: 14px;
+    }
+    .summary-bar {
+      display: flex;
+      gap: 12px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    .summary-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+    .summary-chip span { font-weight: 600; }
+    .summary-chip.green span { color: #15803d; }
+    .summary-chip.red span   { color: #991b1b; }
+  </style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <span></span>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-email" id="user-email">—</div>
+    </div>
+    <div id="sidebar-footer"></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="page-title">Upcoming Payments</div>
+          <div class="page-subtitle">Split payments (Payment 2 / 3 / 4) from sales records</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="summary-bar" class="summary-bar" style="display:none"></div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input type="text" id="search-input" placeholder="Search by lead or closer…" />
+      </div>
+      <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="show-past" /> Show past payments
+      </label>
+    </div>
+
+    <div class="table-wrap">
+      <div id="page-error"></div>
+      <div id="table-loading"><div class="spinner"></div> Loading…</div>
+      <div id="table-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Payment Date</th>
+              <th>Lead Name</th>
+              <th>Closer</th>
+              <th>Payment #</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="empty-state" style="display:none">
+        No upcoming payments found.<br>
+        <span style="font-size:12px;color:var(--text3)">Split payments appear here when you add Payment 2/3/4 dates to a sales record.</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { renderNav }   from './js/nav.js';
+    import { sb }          from './js/supabase.js';
+    import { getActiveWorkspace } from './js/workspace.js';
+
+    await requireAuth();
+    renderNav('upcoming-payments');
+
+    const gbp = v => '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    let allRows = [];
+
+    async function load() {
+      document.getElementById('table-loading').style.display = 'flex';
+      document.getElementById('table-wrap').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'none';
+
+      const wsId = getActiveWorkspace();
+      let q = sb.from('sales').select('lead_name, closer, date_payment_2, payment_2, date_payment_3, payment_3, date_payment_4, payment_4');
+      if (wsId) q = q.eq('workspace_id', wsId);
+      const { data, error } = await q;
+
+      if (error) {
+        document.getElementById('page-error').textContent = error.message;
+        document.getElementById('page-error').style.display = 'block';
+        document.getElementById('table-loading').style.display = 'none';
+        return;
+      }
+
+      // Flatten payment 2/3/4 into individual rows
+      allRows = [];
+      (data || []).forEach(r => {
+        [[r.date_payment_2, r.payment_2, 2], [r.date_payment_3, r.payment_3, 3], [r.date_payment_4, r.payment_4, 4]].forEach(([d, amt, num]) => {
+          if (d && amt) {
+            allRows.push({ date: d, lead_name: r.lead_name || '—', closer: r.closer || '—', payment_num: num, amount: amt });
+          }
+        });
+      });
+
+      // Sort by date ascending
+      allRows.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      document.getElementById('table-loading').style.display = 'none';
+      render();
+    }
+
+    function render() {
+      const search   = document.getElementById('search-input').value.toLowerCase();
+      const showPast = document.getElementById('show-past').checked;
+
+      let rows = allRows.filter(r => {
+        const d = new Date(r.date); d.setHours(0,0,0,0);
+        if (!showPast && d < today) return false;
+        if (search && !r.lead_name.toLowerCase().includes(search) && !r.closer.toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+      // Summary
+      const upcoming = allRows.filter(r => { const d = new Date(r.date); d.setHours(0,0,0,0); return d >= today; });
+      const overdue  = allRows.filter(r => { const d = new Date(r.date); d.setHours(0,0,0,0); return d < today; });
+      const totalUpcoming = upcoming.reduce((s,r) => s + Number(r.amount), 0);
+      const totalOverdue  = overdue.reduce((s,r) => s + Number(r.amount), 0);
+
+      const bar = document.getElementById('summary-bar');
+      bar.style.display = 'flex';
+      bar.innerHTML = `
+        <div class="summary-chip green">Upcoming: <span>${upcoming.length} payments · ${gbp(totalUpcoming)}</span></div>
+        ${overdue.length ? `<div class="summary-chip red">Overdue: <span>${overdue.length} payments · ${gbp(totalOverdue)}</span></div>` : ''}
+      `;
+
+      const tbody = document.getElementById('table-body');
+      if (!rows.length) {
+        document.getElementById('table-wrap').style.display = 'none';
+        document.getElementById('empty-state').style.display = 'block';
+        return;
+      }
+
+      tbody.innerHTML = rows.map(r => {
+        const d = new Date(r.date); d.setHours(0,0,0,0);
+        const diff = Math.round((d - today) / 86400000);
+        let badge, status;
+        if (diff < 0)      { badge = 'badge-overdue';  status = `Overdue (${Math.abs(diff)}d ago)`; }
+        else if (diff === 0) { badge = 'badge-today';  status = 'Due today'; }
+        else                 { badge = 'badge-upcoming'; status = `In ${diff} day${diff===1?'':'s'}`; }
+
+        const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `<tr>
+          <td class="td-cell">${dateStr}</td>
+          <td class="td-cell">${r.lead_name}</td>
+          <td class="td-cell">${r.closer}</td>
+          <td class="td-cell">Payment ${r.payment_num}</td>
+          <td class="td-cell" style="font-weight:600">${gbp(r.amount)}</td>
+          <td class="td-cell"><span class="badge ${badge}">${status}</span></td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('table-wrap').style.display = 'block';
+      document.getElementById('empty-state').style.display = 'none';
+    }
+
+    document.getElementById('search-input').addEventListener('input', render);
+    document.getElementById('show-past').addEventListener('change', render);
+
+    await load();
+  </script>
+</body>
+</html>
