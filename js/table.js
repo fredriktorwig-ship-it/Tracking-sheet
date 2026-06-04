@@ -2,7 +2,7 @@
 import { sb } from './supabase.js';
 
 export class TablePage {
-  constructor({ table, columns, formFields, defaultSort = 'created_at' }) {
+  constructor({ table, columns, formFields, defaultSort = 'created_at', defaultHidden = [] }) {
     this.table       = table;
     this.columns     = columns;
     this.formFields  = formFields;
@@ -12,9 +12,9 @@ export class TablePage {
     this.dateFrom    = null;
     this.dateTo      = null;
     this.search      = '';
-    // Load hidden columns from localStorage
+    // Load hidden columns from localStorage; fall back to defaultHidden on first visit
     const stored = localStorage.getItem('hiddenCols_' + table);
-    this.hiddenCols = stored ? new Set(JSON.parse(stored)) : new Set();
+    this.hiddenCols = stored ? new Set(JSON.parse(stored)) : new Set(defaultHidden);
   }
 
   saveHiddenCols() {

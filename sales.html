@@ -88,6 +88,7 @@
     const page = new TablePage({
       table: 'sales',
       defaultSort: 'date_of_call',
+      defaultHidden: ['date_payment_2','payment_2','date_payment_3','payment_3','date_payment_4','payment_4','utm_content','call_recording_link','payment_notes','notes'],
       columns: [
         { key: 'date_of_call',          label: 'Date',             type: 'date' },
         { key: 'lead_name',             label: 'Lead',             type: 'text' },
@@ -99,7 +100,17 @@
         { key: 'payment_type',          label: 'Payment Type',     type: 'text' },
         { key: 'deal_size',             label: 'Deal Size',        type: 'currency' },
         { key: 'cash_on_call',          label: 'Cash on Call',     type: 'currency' },
+        { key: 'date_payment_2',        label: 'Payment 2 Date',   type: 'date' },
+        { key: 'payment_2',             label: 'Payment 2',        type: 'currency' },
+        { key: 'date_payment_3',        label: 'Payment 3 Date',   type: 'date' },
+        { key: 'payment_3',             label: 'Payment 3',        type: 'currency' },
+        { key: 'date_payment_4',        label: 'Payment 4 Date',   type: 'date' },
+        { key: 'payment_4',             label: 'Payment 4',        type: 'currency' },
         { key: 'utm_source',            label: 'UTM Source',       type: 'text' },
+        { key: 'utm_content',           label: 'UTM Content',      type: 'text' },
+        { key: 'call_recording_link',   label: 'Recording',        type: 'text' },
+        { key: 'payment_notes',         label: 'Payment Notes',    type: 'text' },
+        { key: 'notes',                 label: 'Notes',            type: 'text' },
       ],
       formFields: [
         { key: 'lead_name',             label: 'Lead Name',                   type: 'text' },
