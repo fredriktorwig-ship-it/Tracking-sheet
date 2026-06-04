@@ -42,6 +42,64 @@ function setCollapsed(v) { localStorage.setItem('sidebarCollapsed', v ? '1' : '0
 export function getActiveWorkspace() { return localStorage.getItem('activeWorkspace'); }
 export function setActiveWorkspace(id) { localStorage.setItem('activeWorkspace', id); }
 
+// ── SPA Router ────────────────────────────────────────────────────────────────
+let _pageStyle   = null;   // <style> injected for the current page
+let _pageScripts = [];     // <script> tags injected for the current page
+
+async function navigateTo(href) {
+  try {
+    const res = await fetch(href);
+    if (!res.ok) throw new Error('fetch failed');
+    const html = await res.text();
+    const doc  = new DOMParser().parseFromString(html, 'text/html');
+
+    // 1. Swap page-specific <style> blocks (shared.css stays)
+    _pageStyle?.remove();
+    const inlineStyles = Array.from(doc.querySelectorAll('head style'));
+    if (inlineStyles.length) {
+      _pageStyle = document.createElement('style');
+      _pageStyle.textContent = inlineStyles.map(s => s.textContent).join('\n');
+      document.head.appendChild(_pageStyle);
+    } else {
+      _pageStyle = null;
+    }
+
+    // 2. Swap .main content (sidebar stays untouched)
+    const newMain = doc.querySelector('.main');
+    const oldMain = document.querySelector('.main');
+    if (newMain && oldMain) oldMain.replaceWith(newMain);
+
+    // 3. Remove old page scripts, run new ones
+    _pageScripts.forEach(s => s.remove());
+    _pageScripts = [];
+    for (const s of doc.querySelectorAll('script[type="module"]')) {
+      const el = document.createElement('script');
+      el.type = 'module';
+      el.textContent = s.textContent;
+      document.body.appendChild(el);
+      _pageScripts.push(el);
+    }
+
+    // 4. Update URL, title, active nav item
+    history.pushState({ href }, '', href);
+    document.title = doc.title;
+    document.querySelectorAll('#sidebar-nav .nav-item').forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === href);
+    });
+
+  } catch (e) {
+    // Fallback: normal navigation
+    window.location.href = href;
+  }
+}
+
+// Browser back/forward
+window.addEventListener('popstate', e => {
+  if (e.state?.href) navigateTo(e.state.href);
+});
+
+// ── /SPA Router ───────────────────────────────────────────────────────────────
+
 export async function renderNav(activeId) {
   const sidebar = document.querySelector('.sidebar');
   const nav     = document.getElementById('sidebar-nav');
@@ -192,6 +250,24 @@ export async function renderNav(activeId) {
       <span class="nav-label">${p.label}</span>
     </a>
   `).join('');
+
+  // SPA: intercept nav clicks so we swap content without a full reload
+  nav.addEventListener('click', e => {
+    const link = e.target.closest('.nav-item[href]');
+    if (!link) return;
+    e.preventDefault();
+    navigateTo(link.getAttribute('href'));
+  });
+
+  // Prefetch all pages in the background so first SPA load is instant
+  PAGES.forEach(p => {
+    if (!document.querySelector(`link[rel="prefetch"][href="${p.href}"]`)) {
+      const lnk = document.createElement('link');
+      lnk.rel  = 'prefetch';
+      lnk.href = p.href;
+      document.head.appendChild(lnk);
+    }
+  });
 
   // Footer logout
   if (footer) {
