@@ -385,6 +385,7 @@ tr:hover .td-actions { background: var(--surface2); }
 .sidebar.collapsed #sidebar-footer {
   display: none;
 }
+.sidebar.collapsed .sidebar-logo .logo-icon { display: none; }
 .sidebar.collapsed .sidebar-logo { justify-content: center; padding: 20px 0 16px; }
 .sidebar.collapsed .nav-item { justify-content: center; padding: 10px 0; }
 .sidebar.collapsed .nav-icon { width: auto; margin: 0; }
