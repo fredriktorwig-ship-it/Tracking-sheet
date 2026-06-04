@@ -172,8 +172,11 @@
         card.className = 'ws-card';
         card.innerHTML = `
           <div class="ws-card-header">
-            <div>
-              <div class="ws-card-name">${ws.name}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="ws-card-name" id="ws-name-${ws.id}">${ws.name}</div>
+                ${isAdmin ? `<button class="btn-sm" data-rename="${ws.id}" title="Rename workspace" style="padding:3px 8px;font-size:11px">Rename</button>` : ''}
+              </div>
               <div class="ws-card-sub">${(members||[]).length} member${(members||[]).length!==1?'s':''}</div>
             </div>
             ${isAdmin ? `<button class="btn-sm danger" data-delete="${ws.id}">Delete</button>` : ''}
@@ -293,6 +296,19 @@
           list.querySelectorAll(`[id^="cpane-"][id$="-${wsId}"]`).forEach(p=>p.classList.remove('active'));
           tab.classList.add('active');
           document.getElementById(`cpane-${pane}-${wsId}`)?.classList.add('active');
+        });
+      });
+
+      // Rename workspace (admin only)
+      list.querySelectorAll('[data-rename]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const wsId   = btn.dataset.rename;
+          const current = document.getElementById('ws-name-' + wsId)?.textContent || '';
+          const newName = prompt('Rename workspace:', current);
+          if (!newName || newName.trim() === current.trim()) return;
+          const { error } = await sb.from('workspaces').update({ name: newName.trim() }).eq('id', wsId);
+          if (error) showMsg(error.message, 'err');
+          else { showMsg('Workspace renamed'); loadWorkspaces(); }
         });
       });
 

@@ -1,6 +1,40 @@
 import { signOut, getUser } from './auth.js';
 import { sb } from './supabase.js';
 
+// ── Theme ─────────────────────────────────────────────────────────────────────
+const ACCENT_COLOURS = [
+  { name: 'Green',  value: '#16a34a' },
+  { name: 'Blue',   value: '#3b82f6' },
+  { name: 'Purple', value: '#7c3aed' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Red',    value: '#ef4444' },
+  { name: 'Pink',   value: '#ec4899' },
+];
+const BG_THEMES = [
+  { name: 'Default', bg: '#f4f6f9', surface: '#ffffff', surface2: '#f0f2f5', border: '#e2e6ed', text: '#0f1117', text2: '#64748b', text3: '#b0bac8' },
+  { name: 'Warm',    bg: '#f7f3ee', surface: '#fffdf9', surface2: '#f2ede6', border: '#e8ddd2', text: '#1a1410', text2: '#7a6a5a', text3: '#b8a898' },
+  { name: 'Dark',    bg: '#0f1117', surface: '#1a1d27', surface2: '#22263a', border: '#2e3347', text: '#e8eaf0', text2: '#8b93a8', text3: '#4a5068' },
+];
+
+function applyTheme() {
+  const accent = localStorage.getItem('themeAccent') || '#16a34a';
+  const bgName = localStorage.getItem('themeBg')     || 'Default';
+  const bg     = BG_THEMES.find(t => t.name === bgName) || BG_THEMES[0];
+  const r      = document.documentElement.style;
+  r.setProperty('--accent',   accent);
+  r.setProperty('--green',    accent);
+  r.setProperty('--bg',       bg.bg);
+  r.setProperty('--surface',  bg.surface);
+  r.setProperty('--surface2', bg.surface2);
+  r.setProperty('--border',   bg.border);
+  r.setProperty('--text',     bg.text);
+  r.setProperty('--text2',    bg.text2);
+  r.setProperty('--text3',    bg.text3);
+}
+applyTheme(); // apply immediately on every page load
+
+// ── /Theme ────────────────────────────────────────────────────────────────────
+
 // SVG icons (no emojis)
 const ICONS = {
   dashboard: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
@@ -286,12 +320,64 @@ export async function renderNav(activeId) {
     }
   });
 
-  // Footer logout
+  // Footer — theme picker + logout
   if (footer) {
-    footer.innerHTML = `<button class="nav-item" id="logout-btn" style="width:100%;border:none;cursor:pointer;background:none;text-align:left">
-      <span class="nav-icon">${ICONS.logout}</span>
-      <span class="nav-label">Log out</span>
-    </button>`;
+    footer.innerHTML = `
+      <!-- Theme popover (renders above footer) -->
+      <div class="theme-popover" id="theme-popover">
+        <div class="theme-section-label">Accent colour</div>
+        <div class="theme-swatches" id="theme-accent-swatches">
+          ${ACCENT_COLOURS.map(c => `
+            <div class="swatch ${(localStorage.getItem('themeAccent')||'#16a34a')===c.value?'active':''}"
+              data-accent="${c.value}" title="${c.name}"
+              style="background:${c.value}"></div>
+          `).join('')}
+        </div>
+        <div class="theme-section-label">Background</div>
+        <div class="bg-swatches" id="theme-bg-swatches">
+          ${BG_THEMES.map(t => `
+            <div class="bg-swatch ${(localStorage.getItem('themeBg')||'Default')===t.name?'active':''}"
+              data-bg="${t.name}"
+              style="background:${t.surface}">${t.name}</div>
+          `).join('')}
+        </div>
+      </div>
+
+      <button class="theme-btn" id="theme-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <span class="nav-label">Appearance</span>
+      </button>
+
+      <button class="nav-item" id="logout-btn" style="width:100%;border:none;cursor:pointer;background:none;text-align:left">
+        <span class="nav-icon">${ICONS.logout}</span>
+        <span class="nav-label">Log out</span>
+      </button>`;
+
+    // Theme popover toggle
+    const themeBtn     = document.getElementById('theme-btn');
+    const themePopover = document.getElementById('theme-popover');
+    themeBtn.addEventListener('click', e => { e.stopPropagation(); themePopover.classList.toggle('open'); });
+    document.addEventListener('click', () => themePopover.classList.remove('open'));
+    themePopover.addEventListener('click', e => e.stopPropagation());
+
+    // Accent colour swatches
+    document.getElementById('theme-accent-swatches').addEventListener('click', e => {
+      const sw = e.target.closest('.swatch');
+      if (!sw) return;
+      localStorage.setItem('themeAccent', sw.dataset.accent);
+      applyTheme();
+      document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.accent === sw.dataset.accent));
+    });
+
+    // Background swatches
+    document.getElementById('theme-bg-swatches').addEventListener('click', e => {
+      const sw = e.target.closest('.bg-swatch');
+      if (!sw) return;
+      localStorage.setItem('themeBg', sw.dataset.bg);
+      applyTheme();
+      document.querySelectorAll('.bg-swatch').forEach(s => s.classList.toggle('active', s.dataset.bg === sw.dataset.bg));
+    });
+
     document.getElementById('logout-btn').addEventListener('click', signOut);
   }
 
