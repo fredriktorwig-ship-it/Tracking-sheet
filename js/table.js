@@ -50,16 +50,85 @@ export class TablePage {
     }
     tbody.innerHTML = rows.map(r => `
       <tr data-id="${r.id}">
-        ${this.columns.map(c => `<td class="td-cell" data-key="${c.key}" data-id="${r.id}">${this.formatCell(r[c.key], c)}</td>`).join('')}
+        ${this.columns.map(c => `<td class="td-cell" data-key="${c.key}" data-id="${r.id}" title="Click to edit">${this.formatCell(r[c.key], c)}</td>`).join('')}
         <td class="td-actions">
-          <button class="row-edit-btn" data-id="${r.id}" title="Edit">✏️</button>
-          <button class="row-del-btn"  data-id="${r.id}" title="Delete">🗑️</button>
+          <button class="row-del-btn" data-id="${r.id}" title="Delete">🗑️</button>
         </td>
       </tr>
     `).join('');
 
     tbody.querySelectorAll('.row-del-btn').forEach(b => b.addEventListener('click', () => this.deleteRow(b.dataset.id)));
-    tbody.querySelectorAll('.row-edit-btn').forEach(b => b.addEventListener('click', () => this.openEditForm(b.dataset.id)));
+
+    // Inline editing — click any cell to edit it directly
+    tbody.querySelectorAll('.td-cell').forEach(td => {
+      td.addEventListener('click', () => this.startInlineEdit(td));
+    });
+  }
+
+  startInlineEdit(td) {
+    if (td.querySelector('input,select,textarea')) return; // already editing
+    const id  = td.dataset.id;
+    const key = td.dataset.key;
+    const row = this.rows.find(r => String(r.id) === String(id));
+    if (!row) return;
+    const col = this.formFields.find(f => f.key === key) || this.columns.find(c => c.key === key);
+    if (!col) return;
+
+    const raw = row[key] ?? '';
+    td.classList.add('editing');
+
+    let el;
+    if (col.options) {
+      el = document.createElement('select');
+      el.innerHTML = `<option value="">— Select —</option>` +
+        col.options.map(o => `<option value="${o}" ${o===raw?'selected':''}>${o}</option>`).join('');
+    } else if (col.type === 'date') {
+      el = document.createElement('input');
+      el.type  = 'date';
+      el.value = raw ? raw.slice(0, 10) : '';
+    } else if (col.type === 'number' || col.type === 'currency') {
+      el = document.createElement('input');
+      el.type  = 'number';
+      el.step  = '0.01';
+      el.value = raw ?? '';
+    } else {
+      el = document.createElement('input');
+      el.type  = 'text';
+      el.value = raw ?? '';
+    }
+
+    el.className = 'inline-edit-input';
+    td.innerHTML = '';
+    td.appendChild(el);
+    el.focus();
+    if (el.select) el.select();
+
+    const save = async () => {
+      const newVal = col.type === 'number' || col.type === 'currency'
+        ? (el.value !== '' ? parseFloat(el.value) : null)
+        : (el.value.trim() || null);
+      td.classList.remove('editing');
+      // Optimistically update local row
+      row[key] = newVal;
+      td.innerHTML = this.formatCell(newVal, col);
+      td.addEventListener('click', () => this.startInlineEdit(td), { once: true });
+      // Persist to Supabase
+      const { error } = await sb.from(this.table).update({ [key]: newVal }).eq('id', id);
+      if (error) { td.style.outline = '2px solid red'; setTimeout(() => td.style.outline = '', 2000); }
+    };
+
+    const cancel = () => {
+      td.classList.remove('editing');
+      td.innerHTML = this.formatCell(raw, col);
+      td.addEventListener('click', () => this.startInlineEdit(td), { once: true });
+    };
+
+    el.addEventListener('blur',    save);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') { el.removeEventListener('blur', save); cancel(); }
+    });
+    if (col.options) el.addEventListener('change', () => el.blur());
   }
 
   formatCell(val, col) {
