@@ -92,7 +92,7 @@ export class TablePage {
     let el;
     if (col.options) {
       el = document.createElement('select');
-      el.innerHTML = `<option value="">— Select —</option>` +
+      el.innerHTML = `<option value="">—</option>` +
         col.options.map(o => `<option value="${o}" ${o===raw?'selected':''}>${o}</option>`).join('');
     } else if (col.type === 'date') {
       el = document.createElement('input');
