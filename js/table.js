@@ -4,14 +4,25 @@ import { sb } from './supabase.js';
 export class TablePage {
   constructor({ table, columns, formFields, defaultSort = 'created_at' }) {
     this.table       = table;
-    this.columns     = columns;       // { key, label, type, options? }
-    this.formFields  = formFields;    // same shape as columns
+    this.columns     = columns;
+    this.formFields  = formFields;
     this.defaultSort = defaultSort;
     this.rows        = [];
     this.editingId   = null;
     this.dateFrom    = null;
     this.dateTo      = null;
     this.search      = '';
+    // Load hidden columns from localStorage
+    const stored = localStorage.getItem('hiddenCols_' + table);
+    this.hiddenCols = stored ? new Set(JSON.parse(stored)) : new Set();
+  }
+
+  saveHiddenCols() {
+    localStorage.setItem('hiddenCols_' + this.table, JSON.stringify([...this.hiddenCols]));
+  }
+
+  visibleColumns() {
+    return this.columns.filter(c => !this.hiddenCols.has(c.key));
   }
 
   async init() {
@@ -44,13 +55,14 @@ export class TablePage {
       const q = this.search.toLowerCase();
       rows = rows.filter(r => this.columns.some(c => String(r[c.key]||'').toLowerCase().includes(q)));
     }
+    const vis = this.visibleColumns();
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="${this.columns.length + 1}" style="text-align:center;padding:40px;color:#4b5563">No records yet. Add one using the button above.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${vis.length + 1}" style="text-align:center;padding:40px;color:#4b5563">No records yet. Add one using the button above.</td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map(r => `
       <tr data-id="${r.id}">
-        ${this.columns.map(c => `<td class="td-cell" data-key="${c.key}" data-id="${r.id}" title="Click to edit">${this.formatCell(r[c.key], c)}</td>`).join('')}
+        ${vis.map(c => `<td class="td-cell" data-key="${c.key}" data-id="${r.id}" title="Click to edit">${this.formatCell(r[c.key], c)}</td>`).join('')}
         <td class="td-actions">
           <button class="row-del-btn" data-id="${r.id}" title="Delete">🗑️</button>
         </td>
@@ -146,7 +158,8 @@ export class TablePage {
   renderTableHeaders() {
     const thead = document.getElementById('table-head');
     if (!thead) return;
-    thead.innerHTML = `<tr>${this.columns.map(c => `<th>${c.label}</th>`).join('')}<th style="width:80px"></th></tr>`;
+    const vis = this.visibleColumns();
+    thead.innerHTML = `<tr>${vis.map(c => `<th>${c.label}</th>`).join('')}<th style="width:48px"></th></tr>`;
   }
 
   renderFormFields() {
@@ -268,6 +281,19 @@ export class TablePage {
     document.getElementById('panel-overlay')?.addEventListener('click', () => this.closePanel());
     document.getElementById('form-submit')?.addEventListener('click', () => this.submitForm());
     document.getElementById('search-input')?.addEventListener('input', e => { this.search = e.target.value; this.render(); });
+
+    // Column visibility picker
+    this.renderColPicker();
+
+    document.getElementById('col-picker-btn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const dd = document.getElementById('col-picker-dropdown');
+      if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', () => {
+      const dd = document.getElementById('col-picker-dropdown');
+      if (dd) dd.style.display = 'none';
+    });
     document.getElementById('apply-dates')?.addEventListener('click', () => {
       this.dateFrom = document.getElementById('filter-from')?.value || null;
       this.dateTo   = document.getElementById('filter-to')?.value   || null;
@@ -291,5 +317,37 @@ export class TablePage {
   showError(msg) {
     const el = document.getElementById('page-error');
     if (el) { el.textContent = '⚠ ' + msg; el.style.display = 'block'; }
+  }
+
+  renderColPicker() {
+    const bar = document.querySelector('.filter-bar');
+    if (!bar || document.getElementById('col-picker-btn')) return;
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;margin-left:auto;flex-shrink:0';
+    wrap.innerHTML = `
+      <button id="col-picker-btn" class="btn-filter" title="Show/hide columns" style="display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+        Columns
+      </button>
+      <div id="col-picker-dropdown" style="position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);padding:8px;min-width:180px;z-index:200;display:none">
+        ${this.columns.map(c => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+            <input type="checkbox" data-col="${c.key}" ${this.hiddenCols.has(c.key)?'':'checked'} style="accent-color:var(--accent);width:14px;height:14px" />
+            ${c.label}
+          </label>
+        `).join('')}
+      </div>`;
+    bar.appendChild(wrap);
+
+    wrap.querySelector('#col-picker-dropdown').addEventListener('change', e => {
+      const cb = e.target;
+      if (!cb.dataset.col) return;
+      if (cb.checked) this.hiddenCols.delete(cb.dataset.col);
+      else            this.hiddenCols.add(cb.dataset.col);
+      this.saveHiddenCols();
+      this.renderTableHeaders();
+      this.render();
+    });
+    wrap.querySelector('#col-picker-dropdown').addEventListener('click', e => e.stopPropagation());
   }
 }
