@@ -64,10 +64,17 @@ async function navigateTo(href) {
       _pageStyle = null;
     }
 
-    // 2. Swap .main content (sidebar stays untouched)
+    // 2. Swap .main content (sidebar stays untouched) — fade to avoid flash
     const newMain = doc.querySelector('.main');
     const oldMain = document.querySelector('.main');
-    if (newMain && oldMain) oldMain.replaceWith(newMain);
+    if (newMain && oldMain) {
+      newMain.style.opacity = '0';
+      oldMain.replaceWith(newMain);
+      requestAnimationFrame(() => {
+        newMain.style.transition = 'opacity 0.18s ease';
+        newMain.style.opacity    = '1';
+      });
+    }
 
     // 3. Remove old page scripts, run new ones
     _pageScripts.forEach(s => s.remove());
