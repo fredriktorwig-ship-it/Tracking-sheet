@@ -113,6 +113,16 @@ export async function renderNav(activeId) {
   const footer  = document.getElementById('sidebar-footer');
   if (!nav || !sidebar) return;
 
+  // SPA: sidebar already built — just sync the active highlight and return.
+  // Prevents full sidebar rebuild (and Supabase re-query) on every page switch.
+  if (nav.children.length > 0) {
+    nav.querySelectorAll('.nav-item[href]').forEach(a => {
+      const pageId = a.getAttribute('href').replace('.html', '');
+      a.classList.toggle('active', pageId === activeId);
+    });
+    return;
+  }
+
   // Apply collapse state immediately via body class (avoids flash/gap)
   if (getCollapsed()) {
     sidebar.classList.add('collapsed');
