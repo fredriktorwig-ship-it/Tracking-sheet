@@ -295,37 +295,7 @@
       const el = document.getElementById('sales-stats');
       if (!el) return;
 
-      // Breakdown tables
       let html = '';
-      html += mkBreakdown('Call Type',
-        ['Call Type','Count'],
-        groupBy(sales,'call_type').map(([k,v])=>[k, v.length])
-      );
-      html += mkBreakdown('UTM Source',
-        ['UTM Source','Calls','Closed','Revenue'],
-        groupBy(sales,'utm_source').map(([k,v])=>{
-          const cl = v.filter(r=>r.closed==='Yes').length;
-          const rv = v.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
-          return [k, v.length, cl, gbp(rv)];
-        })
-      );
-      html += mkBreakdown('UTM Content',
-        ['UTM Content','Calls','Closed'],
-        groupBy(sales,'utm_content').map(([k,v])=>{
-          const cl = v.filter(r=>r.closed==='Yes').length;
-          return [k, v.length, cl];
-        })
-      );
-      html += mkBreakdown('Closer',
-        ['Closer','Total Calls','Live Calls','Closed','Revenue','Close Rate'],
-        groupBy(sales,'closer').map(([k,v])=>{
-          const live   = v.filter(r=>r.call_info==='Live Call').length;
-          const closed = v.filter(r=>r.closed==='Yes').length;
-          const rev    = v.filter(r=>r.closed==='Yes').reduce((s,r)=>s+num(r.deal_size),0);
-          return [k, v.length, live, closed, gbp(rev), pct(closed,live)];
-        })
-      );
-
       // Stats
       const sLive      = sales.filter(r=>r.call_info==='Live Call').length;
       const sNoShow    = sales.filter(r=>r.call_info==='No Show').length;
