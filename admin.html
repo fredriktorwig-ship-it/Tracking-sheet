@@ -207,7 +207,7 @@
           <!-- Invite tab -->
           ${isAdmin ? `
           <div class="card-tab-pane" id="cpane-invite-${ws.id}">
-            <div class="section-label">Send invite link</div>
+            <div class="section-label">Invite a team member</div>
             <div class="invite-form">
               <div class="field grow">
                 <label>Email address</label>
@@ -219,11 +219,14 @@
                   ${ROLES.map(r=>`<option value="${r}">${r.charAt(0).toUpperCase()+r.slice(1)}</option>`).join('')}
                 </select>
               </div>
-              <button class="btn-sm accent" data-invite="${ws.id}">Generate invite link</button>
+              <button class="btn-sm accent" data-invite="${ws.id}">Generate link</button>
             </div>
-            <div id="invite-result-${ws.id}" style="margin-top:10px;display:none">
-              <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px">Share this link with them:</div>
-              <div class="invite-link-box" id="invite-link-${ws.id}" title="Click to copy"></div>
+            <div id="invite-result-${ws.id}" style="margin-top:14px;display:none">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px">✅ Link ready — send this to them:</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <div class="invite-link-box" id="invite-link-${ws.id}" style="flex:1;margin:0"></div>
+                <button class="btn-sm accent" id="invite-copy-${ws.id}" style="white-space:nowrap;flex-shrink:0">Copy link</button>
+              </div>
             </div>
           </div>` : ''}
 
@@ -345,11 +348,22 @@
             .insert({ workspace_id: wsId, email, role, invited_by: user.id })
             .select().single();
           if (error) { showMsg(error.message, 'err'); return; }
-          const link = `${siteUrl}join.html?token=${data.token}`;
-          const box  = document.getElementById('invite-link-' + wsId);
-          const res  = document.getElementById('invite-result-' + wsId);
+          const link    = `${siteUrl}join.html?token=${data.token}`;
+          const box     = document.getElementById('invite-link-' + wsId);
+          const res     = document.getElementById('invite-result-' + wsId);
+          const copyBtn = document.getElementById('invite-copy-' + wsId);
           box.textContent = link;
           res.style.display = 'block';
+          // Auto-copy on generate
+          navigator.clipboard.writeText(link).catch(()=>{});
+          showMsg('✅ Invite link generated and copied!');
+          // Copy button
+          copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(link);
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => copyBtn.textContent = 'Copy link', 2000);
+          });
+          // Clicking the link text also copies
           box.addEventListener('click', () => {
             navigator.clipboard.writeText(link);
             showMsg('Invite link copied!');
