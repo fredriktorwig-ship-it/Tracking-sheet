@@ -326,12 +326,10 @@ export async function renderNav(activeId) {
       <!-- Theme popover (renders above footer) -->
       <div class="theme-popover" id="theme-popover">
         <div class="theme-section-label">Accent colour</div>
-        <div class="theme-swatches" id="theme-accent-swatches">
-          ${ACCENT_COLOURS.map(c => `
-            <div class="swatch ${(localStorage.getItem('themeAccent')||'#16a34a')===c.value?'active':''}"
-              data-accent="${c.value}" title="${c.name}"
-              style="background:${c.value}"></div>
-          `).join('')}
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <input type="color" id="accent-picker" value="${localStorage.getItem('themeAccent')||'#16a34a'}"
+            style="width:40px;height:40px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--surface2)" />
+          <span style="font-size:12px;color:var(--text2)" id="accent-hex">${localStorage.getItem('themeAccent')||'#16a34a'}</span>
         </div>
         <div class="theme-section-label">Background</div>
         <div class="bg-swatches" id="theme-bg-swatches">
@@ -360,13 +358,14 @@ export async function renderNav(activeId) {
     document.addEventListener('click', () => themePopover.classList.remove('open'));
     themePopover.addEventListener('click', e => e.stopPropagation());
 
-    // Accent colour swatches
-    document.getElementById('theme-accent-swatches').addEventListener('click', e => {
-      const sw = e.target.closest('.swatch');
-      if (!sw) return;
-      localStorage.setItem('themeAccent', sw.dataset.accent);
+    // Colour wheel picker
+    const accentPicker = document.getElementById('accent-picker');
+    const accentHex    = document.getElementById('accent-hex');
+    accentPicker.addEventListener('input', e => {
+      const val = e.target.value;
+      localStorage.setItem('themeAccent', val);
+      if (accentHex) accentHex.textContent = val;
       applyTheme();
-      document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.accent === sw.dataset.accent));
     });
 
     // Background swatches
