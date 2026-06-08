@@ -223,23 +223,13 @@ export async function renderNav(activeId) {
     } else {
       logoIcon.innerHTML = `<span style="font-size:14px;font-weight:700;color:#fff">${wsName.charAt(0).toUpperCase()}</span>`;
     }
-    // Click behaviour depends on sidebar state:
-    //  • Expanded + admin → upload logo
-    //  • Expanded + non-admin → no-op (workspace switcher is on the chevron / name)
-    //  • Collapsed + multiple workspaces → open workspace switcher
-    logoIcon.style.cursor = (isAdmin || hasMultiple) ? 'pointer' : 'default';
-    logoIcon.title = isAdmin ? 'Click to upload logo (or switch workspace when collapsed)' : 'Click to switch workspace';
-    logoIcon.addEventListener('click', async e => {
-      e.stopPropagation();
-      const collapsed = sidebar.classList.contains('collapsed');
-      // Collapsed → open workspace switcher
-      if (collapsed && hasMultiple) {
-        const dd = sidebar.querySelector('.ws-dropdown');
-        if (dd) dd.classList.toggle('open');
-        return;
-      }
-      // Expanded admin → upload logo
-      if (isAdmin) {
+    // Admins can click logo to upload (only when expanded)
+    if (isAdmin) {
+      logoIcon.style.cursor = 'pointer';
+      logoIcon.title = 'Click to upload logo';
+      logoIcon.addEventListener('click', e => {
+        if (sidebar.classList.contains('collapsed')) return; // no-op when collapsed
+        e.stopPropagation();
         const inp = document.createElement('input');
         inp.type = 'file'; inp.accept = 'image/*';
         inp.onchange = async ev => {
@@ -254,8 +244,8 @@ export async function renderNav(activeId) {
           }
         };
         inp.click();
-      }
-    });
+      });
+    }
   }
 
   if (logoSpan) {
