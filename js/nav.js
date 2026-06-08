@@ -187,7 +187,7 @@ export async function renderNav(activeId) {
     });
   }
 
-  // Load workspaces — fetch basic info first (resilient if accent_color column missing)
+  // Load workspaces (name + logo only)
   let workspaces = [];
   let activeWs = getActiveWorkspace();
   try {
@@ -197,22 +197,11 @@ export async function renderNav(activeId) {
       id: m.workspaces?.id,
       name: m.workspaces?.name,
       logo_data: m.workspaces?.logo_data,
-      accent_color: null, // filled in below if column exists
       role: m.role,
     })).filter(w => w.id);
     if (workspaces.length && (!activeWs || !workspaces.find(w => w.id === activeWs))) {
       activeWs = workspaces[0].id;
       setActiveWorkspace(activeWs);
-    }
-    // Try to fetch accent_color for the active workspace separately.
-    // If the column doesn't exist yet, this errors silently and accent_color stays null.
-    if (activeWs) {
-      const { data: colorRow } = await sb.from('workspaces')
-        .select('accent_color').eq('id', activeWs).maybeSingle();
-      if (colorRow?.accent_color) {
-        const w = workspaces.find(w => w.id === activeWs);
-        if (w) w.accent_color = colorRow.accent_color;
-      }
     }
   } catch(e) { console.warn('[workspaces]', e); }
 
@@ -220,13 +209,6 @@ export async function renderNav(activeId) {
   const wsName       = activeWsData?.name || 'Workspace';
   const isAdmin      = activeWsData?.role === 'admin';
   const hasMultiple  = workspaces.length > 1;
-
-  // Sync workspace accent colour to localStorage and re-apply theme
-  const wsAccent = activeWsData?.accent_color || DEFAULT_ACCENT;
-  if (localStorage.getItem('themeAccent') !== wsAccent) {
-    localStorage.setItem('themeAccent', wsAccent);
-    applyTheme();
-  }
 
   // Build sidebar header: workspace logo + name + optional dropdown
   const logoIcon = sidebar.querySelector('.logo-icon');
@@ -241,11 +223,23 @@ export async function renderNav(activeId) {
     } else {
       logoIcon.innerHTML = `<span style="font-size:14px;font-weight:700;color:#fff">${wsName.charAt(0).toUpperCase()}</span>`;
     }
-    if (isAdmin) {
-      logoIcon.style.cursor = 'pointer';
-      logoIcon.title = 'Click to upload logo';
-      logoIcon.addEventListener('click', e => {
-        e.stopPropagation();
+    // Click behaviour depends on sidebar state:
+    //  • Expanded + admin → upload logo
+    //  • Expanded + non-admin → no-op (workspace switcher is on the chevron / name)
+    //  • Collapsed + multiple workspaces → open workspace switcher
+    logoIcon.style.cursor = (isAdmin || hasMultiple) ? 'pointer' : 'default';
+    logoIcon.title = isAdmin ? 'Click to upload logo (or switch workspace when collapsed)' : 'Click to switch workspace';
+    logoIcon.addEventListener('click', async e => {
+      e.stopPropagation();
+      const collapsed = sidebar.classList.contains('collapsed');
+      // Collapsed → open workspace switcher
+      if (collapsed && hasMultiple) {
+        const dd = sidebar.querySelector('.ws-dropdown');
+        if (dd) dd.classList.toggle('open');
+        return;
+      }
+      // Expanded admin → upload logo
+      if (isAdmin) {
         const inp = document.createElement('input');
         inp.type = 'file'; inp.accept = 'image/*';
         inp.onchange = async ev => {
@@ -260,8 +254,8 @@ export async function renderNav(activeId) {
           }
         };
         inp.click();
-      });
-    }
+      }
+    });
   }
 
   if (logoSpan) {
@@ -327,20 +321,15 @@ export async function renderNav(activeId) {
   // Footer: Workspaces → Appearance → Log out
   if (footer) {
     const currentAccent = localStorage.getItem('themeAccent') || DEFAULT_ACCENT;
-    const adminBadge = isAdmin
-      ? ''
-      : '<div class="theme-readonly-note">Only the admin can change the workspace colour.</div>';
 
     footer.innerHTML = `
       <!-- Theme popover -->
       <div class="theme-popover" id="theme-popover">
-        <div class="theme-section-label">Workspace colour</div>
-        ${adminBadge}
-        <div class="swatch-grid ${isAdmin ? '' : 'locked'}" id="accent-swatches">
+        <div class="theme-section-label">Your accent colour</div>
+        <div class="swatch-grid" id="accent-swatches">
           ${SWATCH_COLORS.map(c => `
             <button class="swatch-btn ${c.toLowerCase()===currentAccent.toLowerCase()?'active':''}"
-                    data-color="${c}" style="background:${c}"
-                    ${isAdmin?'':'disabled'} title="${c}">
+                    data-color="${c}" style="background:${c}" title="${c}">
               ${c.toLowerCase()===currentAccent.toLowerCase()?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}
             </button>
           `).join('')}
@@ -387,26 +376,21 @@ export async function renderNav(activeId) {
     document.addEventListener('click', () => themePopover.classList.remove('open'));
     themePopover.addEventListener('click', e => e.stopPropagation());
 
-    // Swatch picker
-    if (isAdmin) {
-      document.getElementById('accent-swatches').addEventListener('click', async e => {
-        const btn = e.target.closest('.swatch-btn');
-        if (!btn) return;
-        const newColor = btn.dataset.color;
-        localStorage.setItem('themeAccent', newColor);
-        applyTheme();
-        // Persist to workspace
-        await sb.from('workspaces').update({ accent_color: newColor }).eq('id', activeWs);
-        // Update UI
-        document.querySelectorAll('.swatch-btn').forEach(b => {
-          const isActive = b.dataset.color.toLowerCase() === newColor.toLowerCase();
-          b.classList.toggle('active', isActive);
-          b.innerHTML = isActive
-            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
-            : '';
-        });
+    // Swatch picker — per-user, saved to localStorage only
+    document.getElementById('accent-swatches').addEventListener('click', e => {
+      const btn = e.target.closest('.swatch-btn');
+      if (!btn) return;
+      const newColor = btn.dataset.color;
+      localStorage.setItem('themeAccent', newColor);
+      applyTheme();
+      document.querySelectorAll('.swatch-btn').forEach(b => {
+        const isActive = b.dataset.color.toLowerCase() === newColor.toLowerCase();
+        b.classList.toggle('active', isActive);
+        b.innerHTML = isActive
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+          : '';
       });
-    }
+    });
 
     // Background swatches
     document.getElementById('theme-bg-swatches').addEventListener('click', e => {

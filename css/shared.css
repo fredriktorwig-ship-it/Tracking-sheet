@@ -388,8 +388,14 @@ tr:hover .td-actions { background: var(--surface2); }
 .sidebar.collapsed #sidebar-footer {
   display: none;
 }
-.sidebar.collapsed .sidebar-logo .logo-icon { display: none; }
-.sidebar.collapsed .sidebar-logo { justify-content: center; padding: 20px 0 16px; }
+.sidebar.collapsed .sidebar-logo .logo-icon {
+  display: flex;
+  width: 30px; height: 30px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+.sidebar.collapsed .sidebar-logo { justify-content: center; padding: 14px 0 14px; flex-direction: column; gap: 6px; }
+.sidebar.collapsed .ws-chev-btn { display: none; }
 .sidebar.collapsed .nav-item { justify-content: center; padding: 10px 0; }
 .sidebar.collapsed .nav-icon { width: auto; margin: 0; }
 .sidebar.collapsed .ws-selector { display: none; }
@@ -441,11 +447,20 @@ tr:hover .td-actions { background: var(--surface2); }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.10);
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
   z-index: 300;
   overflow: hidden;
+  min-width: 200px;
 }
 .ws-dropdown.open { display: block; }
+
+/* When sidebar is collapsed, float the dropdown to the right of the icon */
+.sidebar.collapsed .ws-dropdown {
+  left: 60px;
+  right: auto;
+  top: 14px;
+  width: 220px;
+}
 .ws-dropdown-item {
   display: flex;
   align-items: center;
