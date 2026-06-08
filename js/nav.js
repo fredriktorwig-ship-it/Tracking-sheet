@@ -187,24 +187,34 @@ export async function renderNav(activeId) {
     });
   }
 
-  // Load workspaces (+ accent_color)
+  // Load workspaces — fetch basic info first (resilient if accent_color column missing)
   let workspaces = [];
   let activeWs = getActiveWorkspace();
   try {
     const { data } = await sb.from('workspace_members')
-      .select('workspace_id, role, workspaces(id, name, logo_data, accent_color)');
+      .select('workspace_id, role, workspaces(id, name, logo_data)');
     workspaces = (data || []).map(m => ({
       id: m.workspaces?.id,
       name: m.workspaces?.name,
       logo_data: m.workspaces?.logo_data,
-      accent_color: m.workspaces?.accent_color,
+      accent_color: null, // filled in below if column exists
       role: m.role,
     })).filter(w => w.id);
     if (workspaces.length && (!activeWs || !workspaces.find(w => w.id === activeWs))) {
       activeWs = workspaces[0].id;
       setActiveWorkspace(activeWs);
     }
-  } catch(e) {}
+    // Try to fetch accent_color for the active workspace separately.
+    // If the column doesn't exist yet, this errors silently and accent_color stays null.
+    if (activeWs) {
+      const { data: colorRow } = await sb.from('workspaces')
+        .select('accent_color').eq('id', activeWs).maybeSingle();
+      if (colorRow?.accent_color) {
+        const w = workspaces.find(w => w.id === activeWs);
+        if (w) w.accent_color = colorRow.accent_color;
+      }
+    }
+  } catch(e) { console.warn('[workspaces]', e); }
 
   const activeWsData = workspaces.find(w => w.id === activeWs);
   const wsName       = activeWsData?.name || 'Workspace';
