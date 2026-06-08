@@ -42,12 +42,50 @@
 
     /* Section headers */
     .section-hd {
-      font-size: 11px; font-weight: 700; letter-spacing: .1em;
-      text-transform: uppercase; color: var(--text2);
+      font-size: 18px; font-weight: 700; letter-spacing: 0;
+      text-transform: none; color: var(--text);
       border-bottom: 2px solid var(--border);
-      padding-bottom: 10px; margin-bottom: 14px; margin-top: 30px;
+      padding-bottom: 10px; margin-bottom: 14px; margin-top: 36px;
     }
     .section-hd:first-child { margin-top: 0; }
+
+    /* KPI panel */
+    .kpi-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 20px; margin-bottom: 16px;
+      display: none;
+    }
+    .kpi-panel.open { display: block; }
+    .kpi-panel-title {
+      font-size: 13px; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px;
+    }
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;
+    }
+    .kpi-field { display: flex; flex-direction: column; gap: 4px; }
+    .kpi-label { font-size: 11px; font-weight: 600; color: var(--text2); }
+    .kpi-inputs { display: flex; gap: 6px; align-items: center; }
+    .kpi-inputs input {
+      width: 64px; padding: 5px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg);
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px;
+      outline: none; text-align: center;
+    }
+    .kpi-inputs input:focus { border-color: var(--accent); }
+    .kpi-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .kpi-dot.red    { background: #ef4444; }
+    .kpi-dot.yellow { background: #f59e0b; }
+    .kpi-dot.green  { background: #22c55e; }
+    .kpi-hint { font-size: 10px; color: var(--text2); margin-top: 2px; }
+    .btn-kpi {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text2); font-family: 'Inter', sans-serif;
+      font-size: 12.5px; font-weight: 500; cursor: pointer; transition: .15s;
+    }
+    .btn-kpi:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-kpi.active { background: var(--accent)22; border-color: var(--accent); color: var(--accent); }
 
     /* Stat cards */
     .stats-grid { display: grid; gap: 10px; margin-bottom: 10px; }
@@ -176,6 +214,7 @@
     <div class="dash-topbar">
       <div class="dash-title">Dashboard</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn-kpi" id="kpi-toggle-btn">🎯 KPI Targets</button>
         <div class="presets">
           <button class="preset-chip" data-preset="7d">7 days</button>
           <button class="preset-chip" data-preset="30d">30 days</button>
@@ -192,6 +231,16 @@
     </div>
 
     <div class="dash-content">
+      <!-- KPI Panel (hidden by default) -->
+      <div class="kpi-panel" id="kpi-panel">
+        <div class="kpi-panel-title">🎯 KPI Targets — set your red / green thresholds (yellow = in between)</div>
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn-apply" id="kpi-save-btn" style="font-size:12px;padding:7px 16px">Save targets</button>
+          <button class="sf-clear-btn" id="kpi-reset-btn">Reset to defaults</button>
+        </div>
+      </div>
+
       <div id="dash-loading" class="dash-loading"><div class="spinner"></div> Loading…</div>
       <div id="dash-body" style="display:none"></div>
     </div>
@@ -206,20 +255,133 @@
     await requireAuth();
     renderNav('dashboard');
 
+    /* ── KPI Config ── */
+    const KPI_DEFAULTS = [
+      // Sales rates (higher = better)
+      { key:'close_rate',    label:'Close Rate',              red:20, green:30, inverse:false },
+      { key:'show_rate',     label:'Show Rate',               red:50, green:70, inverse:false },
+      { key:'no_show_rate',  label:'No Show Rate',            red:35, green:20, inverse:true  },
+      { key:'cancelled_rate',label:'Cancelled / RS Rate',     red:25, green:15, inverse:true  },
+      { key:'pif_rate',      label:'PIF Rate',                red:25, green:40, inverse:false },
+      { key:'finq_rate',     label:'Fin. Qualified Rate',     red:40, green:60, inverse:false },
+      { key:'fu_rate',       label:'Booked FU Rate',          red:10, green:20, inverse:false },
+      { key:'cash_rate',     label:'Cash on Call Rate',       red:40, green:65, inverse:false },
+      // Setting
+      { key:'abr_out',       label:'ABR (From Outbound)',     red:5,  green:10, inverse:false },
+      { key:'abr_qual',      label:'ABR (From Qual. Convo)',  red:20, green:35, inverse:false },
+      { key:'reply_rate',    label:'Reply Rate',              red:10, green:20, inverse:false },
+      // VSL
+      { key:'vsl_conv',      label:'VSL Conversion Rate',     red:3,  green:8,  inverse:false },
+      { key:'optin_conv',    label:'Opt-In Conversion',       red:20, green:40, inverse:false },
+    ];
+
+    function loadKPIs() {
+      try {
+        const s = localStorage.getItem('dashKPIs');
+        if (s) {
+          const saved = JSON.parse(s);
+          return KPI_DEFAULTS.map(d => ({ ...d, ...(saved[d.key]||{}) }));
+        }
+      } catch(e) {}
+      return KPI_DEFAULTS.map(d => ({...d}));
+    }
+    function saveKPIs(kpis) {
+      const obj = {};
+      kpis.forEach(k => { obj[k.key] = { red: k.red, green: k.green }; });
+      localStorage.setItem('dashKPIs', JSON.stringify(obj));
+    }
+
+    let kpis = loadKPIs();
+
+    function getKpi(key) { return kpis.find(k => k.key === key); }
+
+    function kpiClass(valPct, kpiKey) {
+      const k = getKpi(kpiKey);
+      if (!k || valPct == null) return 'c-dark';
+      if (k.inverse) {
+        if (valPct <= k.green) return 'c-green';
+        if (valPct <= k.red)   return 'c-amber';
+        return 'c-red';
+      } else {
+        if (valPct >= k.green) return 'c-green';
+        if (valPct >= k.red)   return 'c-amber';
+        return 'c-red';
+      }
+    }
+
+    function renderKpiPanel() {
+      const grid = document.getElementById('kpi-grid');
+      if (!grid) return;
+      grid.innerHTML = kpis.map(k => `
+        <div class="kpi-field">
+          <div class="kpi-label">${k.label}</div>
+          <div class="kpi-inputs">
+            <span class="kpi-dot red"></span>
+            <input type="number" class="kpi-input" data-key="${k.key}" data-type="${k.inverse?'bad':'red'}" value="${k.red}" min="0" max="100" step="0.5" title="${k.inverse?'Above this = red':'Below this = red'}" />
+            <span style="font-size:10px;color:var(--text2)">–</span>
+            <span class="kpi-dot green"></span>
+            <input type="number" class="kpi-input" data-key="${k.key}" data-type="${k.inverse?'good':'green'}" value="${k.green}" min="0" max="100" step="0.5" title="${k.inverse?'Below this = green':'Above this = green'}" />
+            <span style="font-size:11px;color:var(--text2)">%</span>
+          </div>
+          <div class="kpi-hint">${k.inverse ? '🔻 lower is better' : '🔺 higher is better'}</div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('kpi-toggle-btn').addEventListener('click', () => {
+      const panel = document.getElementById('kpi-panel');
+      const btn   = document.getElementById('kpi-toggle-btn');
+      panel.classList.toggle('open');
+      btn.classList.toggle('active');
+      if (panel.classList.contains('open')) renderKpiPanel();
+    });
+
+    document.getElementById('kpi-save-btn').addEventListener('click', () => {
+      document.querySelectorAll('.kpi-input').forEach(inp => {
+        const k = kpis.find(k => k.key === inp.dataset.key);
+        if (!k) return;
+        const v = parseFloat(inp.value);
+        if (inp.dataset.type === 'red' || inp.dataset.type === 'bad') k.red = v;
+        else k.green = v;
+      });
+      saveKPIs(kpis);
+      loadAll(); // re-render with new KPIs
+      document.getElementById('kpi-panel').classList.remove('open');
+      document.getElementById('kpi-toggle-btn').classList.remove('active');
+    });
+
+    document.getElementById('kpi-reset-btn').addEventListener('click', () => {
+      localStorage.removeItem('dashKPIs');
+      kpis = KPI_DEFAULTS.map(d => ({...d}));
+      renderKpiPanel();
+    });
+
     /* ── Helpers ── */
     let dateFrom = null, dateTo = null;
     const isoDate  = d => d.toISOString().slice(0,10);
     const isoToday = () => isoDate(new Date());
     const num  = v => Number(v) || 0;
-    const pct  = (n,d) => d ? (n/d*100).toFixed(1)+'%' : '—';
     const gbp  = v => '£' + num(v).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
     const fmtN = v => num(v).toLocaleString('en-GB');
+
+    // pct returns {str, val}
+    const pctV = (n, d) => d ? n/d*100 : null;
+    const pctS = v => v != null ? v.toFixed(1)+'%' : '—';
+    const pct  = (n, d) => pctS(pctV(n, d)); // legacy plain string version
 
     const card = (label, value, cls='c-dark', highlight=false, size='') =>
       `<div class="stat-card${highlight?' highlight':''}">
         <div class="stat-label">${label}</div>
         <div class="stat-value ${size} ${cls}">${value}</div>
       </div>`;
+
+    // KPI-colored percentage card
+    const kpiCard = (label, n, d, kpiKey, highlight=false, size='') => {
+      const v   = pctV(n, d);
+      const str = pctS(v);
+      const cls = kpiClass(v, kpiKey);
+      return card(label, str, cls, highlight, size);
+    };
 
     async function fetchRange(table, dateCol='date') {
       try {
@@ -318,18 +480,18 @@
         <div class="stats-grid cols-3">
           ${card('Average Deal Size', gbp(sAvgDeal), 'c-dark')}
           ${card('Average Cash on Call', gbp(sAvgCash), 'c-dark')}
-          ${card('Cash on Call Rate', pct(sCash,sRevenue), 'c-dark')}
+          ${kpiCard('Cash on Call Rate', sCash, sRevenue, 'cash_rate')}
         </div>
         <div class="stats-grid cols-4">
-          ${card('Close Rate', pct(sClosed,sLive), 'c-green')}
-          ${card('Show Rate', pct(sLive,sTotal), 'c-green')}
-          ${card('PIF Rate', pct(sPif,sClosed), 'c-purple')}
-          ${card('Financially Qualified Rate', pct(sFinQ,sTotal), 'c-purple')}
+          ${kpiCard('Close Rate', sClosed, sLive, 'close_rate')}
+          ${kpiCard('Show Rate', sLive, sTotal, 'show_rate')}
+          ${kpiCard('PIF Rate', sPif, sClosed, 'pif_rate')}
+          ${kpiCard('Financially Qualified Rate', sFinQ, sTotal, 'finq_rate')}
         </div>
         <div class="stats-grid cols-3">
-          ${card('No Show Rate', pct(sNoShow,sTotal), 'c-red')}
-          ${card('Cancelled / RS Rate', pct(sCancelled,sTotal), 'c-red')}
-          ${card('Booked FU Rate', pct(sFu,sTotal), 'c-amber')}
+          ${kpiCard('No Show Rate', sNoShow, sTotal, 'no_show_rate')}
+          ${kpiCard('Cancelled / RS Rate', sCancelled, sTotal, 'cancelled_rate')}
+          ${kpiCard('Booked FU Rate', sFu, sTotal, 'fu_rate')}
         </div>
         <hr class="sect-divider" />
         <div class="stats-grid cols-4">
@@ -508,11 +670,11 @@
           <div></div>
         </div>
         <div class="stats-grid cols-2">
-          ${card('Total ABR (From Outbound)', pct(tBooked,tOut), 'c-purple')}
-          ${card('Total ABR (From Qualified Convo)', pct(tBooked,tQual), 'c-purple')}
+          ${kpiCard('Total ABR (From Outbound)', tBooked, tOut, 'abr_out')}
+          ${kpiCard('Total ABR (From Qualified Convo)', tBooked, tQual, 'abr_qual')}
         </div>
         <div class="stats-grid cols-4">
-          ${card('Reply Rate', pct(tRep,tOut+tIn+tFu), 'c-dark')}
+          ${kpiCard('Reply Rate', tRep, tOut+tIn+tFu, 'reply_rate')}
           ${card('Reply to Qualified Convo', pct(tQual,tRep), 'c-dark')}
           ${card('Qualified Convo to Pitch', pct(tPitch,tQual), 'c-dark')}
           ${card('Pitch to Call Booked', pct(tBooked,tPitch), 'c-dark')}
@@ -590,9 +752,9 @@
       html += `
         <div class="stats-grid cols-4">
           ${card('Calls Booked', fmtN(vslBooked), 'c-green', true)}
-          ${card('Conversion Rate (Total)', pct(vslBooked,visitors), 'c-green')}
-          ${card('Conversion Rate (From Opt-Ins)', pct(vslBooked,optIns), 'c-purple')}
-          ${card('Opt-In Conversion', pct(optIns,visitors), 'c-dark')}
+          ${kpiCard('Conversion Rate (Total)', vslBooked, visitors, 'vsl_conv')}
+          ${card('Conversion Rate (From Opt-Ins)', pct(vslBooked,optIns), 'c-dark')}
+          ${kpiCard('Opt-In Conversion', optIns, visitors, 'optin_conv')}
         </div>
         <div class="stats-grid cols-2">
           ${card('Unique Visitors', fmtN(visitors), 'c-dark')}
