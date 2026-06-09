@@ -120,6 +120,7 @@
     import { requireAuth, getUser } from './js/auth.js';
     import { renderNav } from './js/nav.js';
     import { sb } from './js/supabase.js';
+    import { CURRENCIES, setCurrencyCode } from './js/workspace.js';
 
     await requireAuth();
     await renderNav('admin');
@@ -150,6 +151,14 @@
       if (error) { showMsg(error.message, 'err'); return; }
 
       const workspaces = (data||[]).map(m => ({ id: m.workspaces?.id, name: m.workspaces?.name, myRole: m.role })).filter(w=>w.id);
+
+      // Fetch currency for each workspace (resilient if column missing)
+      for (const ws of workspaces) {
+        try {
+          const { data: row } = await sb.from('workspaces').select('currency').eq('id', ws.id).maybeSingle();
+          ws.currency = row?.currency || 'GBP';
+        } catch(e) { ws.currency = 'GBP'; }
+      }
       const list = document.getElementById('ws-list');
 
       if (!workspaces.length) {
@@ -173,9 +182,17 @@
         card.innerHTML = `
           <div class="ws-card-header">
             <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <div class="ws-card-name" id="ws-name-${ws.id}">${ws.name}</div>
                 ${isAdmin ? `<button class="btn-sm" data-rename="${ws.id}" title="Rename workspace" style="padding:3px 8px;font-size:11px">Rename</button>` : ''}
+                ${isAdmin ? `
+                  <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text2);margin-left:8px">
+                    Currency
+                    <select data-currency="${ws.id}" class="btn-sm" style="padding:3px 8px;font-size:11.5px;cursor:pointer">
+                      ${CURRENCIES.map(c => `<option value="${c.code}" ${c.code===ws.currency?'selected':''}>${c.label}</option>`).join('')}
+                    </select>
+                  </label>
+                ` : ''}
               </div>
               <div class="ws-card-sub">${(members||[]).length} member${(members||[]).length!==1?'s':''}</div>
             </div>
@@ -312,6 +329,22 @@
           const { error } = await sb.from('workspaces').update({ name: newName.trim() }).eq('id', wsId);
           if (error) showMsg(error.message, 'err');
           else { showMsg('Workspace renamed'); loadWorkspaces(); }
+        });
+      });
+
+      // Change workspace currency (admin only)
+      list.querySelectorAll('[data-currency]').forEach(sel => {
+        sel.addEventListener('change', async () => {
+          const wsId = sel.dataset.currency;
+          const newCode = sel.value;
+          const { error } = await sb.from('workspaces').update({ currency: newCode }).eq('id', wsId);
+          if (error) { showMsg(error.message, 'err'); return; }
+          // If this is the active workspace, sync the cache + re-apply throughout the app
+          const { getActiveWorkspace } = await import('./js/workspace.js');
+          if (getActiveWorkspace() === wsId) {
+            setCurrencyCode(newCode);
+          }
+          showMsg('Currency updated');
         });
       });
 

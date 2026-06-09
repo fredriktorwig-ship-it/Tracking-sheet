@@ -325,7 +325,7 @@
     import { requireAuth }       from './js/auth.js';
     import { renderNav }         from './js/nav.js';
     import { sb }                from './js/supabase.js';
-    import { getActiveWorkspace } from './js/workspace.js';
+    import { getActiveWorkspace, getCurrencySymbol } from './js/workspace.js';
 
     await requireAuth();
     renderNav('dashboard');
@@ -458,7 +458,7 @@
     const isoDate  = d => d.toISOString().slice(0,10);
     const isoToday = () => isoDate(new Date());
     const num  = v => Number(v) || 0;
-    const gbp  = v => '£' + num(v).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const gbp  = v => getCurrencySymbol() + num(v).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
     const fmtN = v => num(v).toLocaleString('en-GB');
 
     // pct returns {str, val}
@@ -534,7 +534,7 @@
 
     /* ── Sales section (filterable) ── */
     let rawSales = [];
-    let salesFilters = { callType:'', utmSource:'', utmContent:'', closer:'' };
+    let salesFilters = { callType:'', utmSource:'', closer:'' };
 
     function unique(arr, key) {
       return [...new Set(arr.map(r=>r[key]).filter(Boolean))].sort();
@@ -611,7 +611,6 @@
       let filtered = rawSales;
       if (salesFilters.callType)   filtered = filtered.filter(r=>r.call_type===salesFilters.callType);
       if (salesFilters.utmSource)  filtered = filtered.filter(r=>r.utm_source===salesFilters.utmSource);
-      if (salesFilters.utmContent) filtered = filtered.filter(r=>r.utm_content===salesFilters.utmContent);
       if (salesFilters.closer)     filtered = filtered.filter(r=>r.closer===salesFilters.closer);
       renderSalesSection(filtered);
     }
@@ -624,11 +623,10 @@
       };
       f('sf-call-type',   'callType');
       f('sf-utm-source',  'utmSource');
-      f('sf-utm-content', 'utmContent');
       f('sf-closer',      'closer');
       document.getElementById('sf-clear')?.addEventListener('click', () => {
-        salesFilters = { callType:'', utmSource:'', utmContent:'', closer:'' };
-        ['sf-call-type','sf-utm-source','sf-utm-content','sf-closer'].forEach(id => {
+        salesFilters = { callType:'', utmSource:'', closer:'' };
+        ['sf-call-type','sf-utm-source','sf-closer'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = '';
         });
@@ -654,7 +652,7 @@
       ]);
 
       rawSales = sales;
-      salesFilters = { callType:'', utmSource:'', utmContent:'', closer:'' };
+      salesFilters = { callType:'', utmSource:'', closer:'' };
 
       const today = new Date(); today.setHours(0,0,0,0);
       const in7   = new Date(today); in7.setDate(in7.getDate()+7);
@@ -713,10 +711,9 @@
 
       // Filter bar — dropdowns populated from raw data
       html += `<div class="sales-filters">
-        ${mkSelect('sf-call-type',   'Call Type',   unique(sales,'call_type'),   '')}
-        ${mkSelect('sf-utm-source',  'UTM Source',  unique(sales,'utm_source'),  '')}
-        ${mkSelect('sf-utm-content', 'UTM Content', unique(sales,'utm_content'), '')}
-        ${mkSelect('sf-closer',      'Closer',      unique(sales,'closer'),      '')}
+        ${mkSelect('sf-call-type',  'Call Type',  unique(sales,'call_type'),  '')}
+        ${mkSelect('sf-utm-source', 'UTM Source', unique(sales,'utm_source'), '')}
+        ${mkSelect('sf-closer',     'Closer',     unique(sales,'closer'),     '')}
         <button class="sf-clear-btn" id="sf-clear">Clear filters</button>
       </div>`;
 

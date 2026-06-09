@@ -203,6 +203,14 @@ export async function renderNav(activeId) {
       activeWs = workspaces[0].id;
       setActiveWorkspace(activeWs);
     }
+    // Fetch currency for the active workspace (resilient if column missing)
+    if (activeWs) {
+      try {
+        const { data: row } = await sb.from('workspaces')
+          .select('currency').eq('id', activeWs).maybeSingle();
+        if (row?.currency) localStorage.setItem('wsCurrency', row.currency);
+      } catch(e) {}
+    }
   } catch(e) { console.warn('[workspaces]', e); }
 
   const activeWsData = workspaces.find(w => w.id === activeWs);

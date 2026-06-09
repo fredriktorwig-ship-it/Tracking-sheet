@@ -1,5 +1,6 @@
 // Shared table + form logic used by all data entry pages
 import { sb } from './supabase.js';
+import { getCurrencySymbol } from './workspace.js';
 
 export class TablePage {
   constructor({ table, columns, formFields, defaultSort = 'created_at', defaultHidden = [] }) {
@@ -145,7 +146,7 @@ export class TablePage {
 
   formatCell(val, col) {
     if (val == null || val === '') return '<span style="color:#4b5563">—</span>';
-    if (col.type === 'currency') return '£' + Number(val).toLocaleString();
+    if (col.type === 'currency') return getCurrencySymbol() + Number(val).toLocaleString();
     if (col.type === 'date') return new Date(val).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
     if (col.options) {
       const colors = { 'Live Call':'#22c55e', 'No Show':'#f87171', 'Cancelled':'#fb923c', 'Yes':'#22c55e', 'No':'#f87171', 'Fu':'#a78bfa', 'New Sale':'#3b7ef8', 'Renewal':'#fb923c', 'PIF':'#38bdf8' };
