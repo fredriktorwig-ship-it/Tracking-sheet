@@ -315,7 +315,8 @@
         if (ws?.webhook_ads) {
           fetch(ws.webhook_ads, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            // text/plain avoids CORS preflight; Zapier still parses JSON body
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({
               ...payload,
               submitted_at: new Date().toISOString(),

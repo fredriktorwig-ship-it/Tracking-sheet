@@ -515,7 +515,8 @@
           const apptRate = totalOutreach ? ((dbPayload.qualified_bookings / totalOutreach) * 100).toFixed(1) + '%' : '—';
           fetch(ws.webhook_setting, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            // text/plain avoids CORS preflight; Zapier still parses JSON body
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({
               ...dbPayload,
               ...reflection,
