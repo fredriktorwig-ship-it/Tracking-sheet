@@ -423,18 +423,22 @@
         });
       });
 
-      // Load existing webhook URLs into inputs
+      // Load existing webhook URLs into inputs (resilient if columns missing)
       for (const ws of workspaces) {
         if (ws.myRole !== 'admin') continue;
-        const { data: wsData } = await sb.from('workspaces').select('webhook_setting, webhook_ads').eq('id', ws.id).single();
-        if (wsData?.webhook_setting) {
-          const el = document.getElementById('wh-setting-' + ws.id);
-          if (el) el.value = wsData.webhook_setting;
-        }
-        if (wsData?.webhook_ads) {
-          const el = document.getElementById('wh-ads-' + ws.id);
-          if (el) el.value = wsData.webhook_ads;
-        }
+        try {
+          const { data: wsData, error: whErr } = await sb.from('workspaces')
+            .select('webhook_setting, webhook_ads').eq('id', ws.id).maybeSingle();
+          if (whErr) { console.warn('[webhook load]', whErr.message); continue; }
+          if (wsData?.webhook_setting) {
+            const el = document.getElementById('wh-setting-' + ws.id);
+            if (el) el.value = wsData.webhook_setting;
+          }
+          if (wsData?.webhook_ads) {
+            const el = document.getElementById('wh-ads-' + ws.id);
+            if (el) el.value = wsData.webhook_ads;
+          }
+        } catch(e) { console.warn('[webhook load]', e); }
       }
 
       // Save webhook URLs
@@ -444,9 +448,19 @@
           const type = btn.dataset.whType; // 'setting' or 'ads'
           const val  = document.getElementById(`wh-${type}-${wsId}`)?.value.trim();
           const col  = type === 'setting' ? 'webhook_setting' : 'webhook_ads';
+          // Visual feedback so user sees the click registered
+          const origText = btn.textContent;
+          btn.textContent = 'Saving…';
+          btn.disabled = true;
           const { error } = await sb.from('workspaces').update({ [col]: val || null }).eq('id', wsId);
-          if (error) showMsg(error.message, 'err');
-          else showMsg('Webhook URL saved!');
+          btn.disabled = false;
+          btn.textContent = origText;
+          if (error) {
+            showMsg('Save failed: ' + error.message, 'err');
+            console.error('[webhook save]', error);
+          } else {
+            showMsg('Webhook URL saved');
+          }
         });
       });
     }
