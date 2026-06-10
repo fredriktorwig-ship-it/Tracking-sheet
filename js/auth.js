@@ -3,7 +3,7 @@ import { sb } from './supabase.js';
 // Guard — call on every protected page
 export async function requireAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = '/index.html'; return null; }
+  if (!session) { window.location.href = 'index.html'; return null; }
   return session;
 }
 
@@ -17,7 +17,7 @@ export async function signIn(email, password) {
 // Sign out
 export async function signOut() {
   await sb.auth.signOut();
-  window.location.href = '/index.html';
+  window.location.href = 'index.html';
 }
 
 // Get current user
