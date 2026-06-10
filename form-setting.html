@@ -363,14 +363,10 @@
 
     <div class="form-card">
       <h2>Bookings</h2>
-      <div class="field-grid">
+      <div class="field-grid cols-1">
         <div class="field">
-          <label>Qualified Bookings</label>
+          <label>Qualified Bookings (Calls Booked)</label>
           <input type="number" id="f-qual-bookings" value="0" min="0" />
-        </div>
-        <div class="field">
-          <label>DQ Bookings</label>
-          <input type="number" id="f-dq-bookings" value="0" min="0" />
         </div>
       </div>
     </div>
@@ -477,18 +473,11 @@
 
       if (!date) { showErr('Please select a date.'); btn.disabled = false; btn.textContent = 'Submit daily stats'; return; }
 
-      const payload = {
+      // Numbers go into the tracking sheet (dm_setting table)
+      const dbPayload = {
         workspace_id: wsId || null,
         date,
         setter,
-        // Reflection
-        win_of_day:                     document.getElementById('f-win').value.trim() || null,
-        hours_worked:                   document.getElementById('f-hours').value.trim() || null,
-        convo_review:                   getYN('convo_review'),
-        time_management_rating:         getScale('time_management'),
-        performance_satisfaction_rating:getScale('performance_satisfaction'),
-        day_analysis:                   document.getElementById('f-analysis').value.trim() || null,
-        // Numbers
         outbounds:          n('f-outbounds'),
         inbounds:           n('f-inbounds'),
         follow_ups_first:   n('f-fu-first'),
@@ -497,11 +486,20 @@
         pitched_calls:      n('f-pitched'),
         booking_links_sent: n('f-links'),
         qualified_bookings: n('f-qual-bookings'),
-        dq_bookings:        n('f-dq-bookings'),
         notes:              document.getElementById('f-notes').value.trim() || null,
       };
 
-      const { error } = await sb.from('dm_setting').insert(payload);
+      // Reflection answers — only sent to Discord via the webhook
+      const reflection = {
+        win_of_day:                      document.getElementById('f-win').value.trim() || null,
+        hours_worked:                    document.getElementById('f-hours').value.trim() || null,
+        convo_review:                    getYN('convo_review'),
+        time_management_rating:          getScale('time_management'),
+        performance_satisfaction_rating: getScale('performance_satisfaction'),
+        day_analysis:                    document.getElementById('f-analysis').value.trim() || null,
+      };
+
+      const { error } = await sb.from('dm_setting').insert(dbPayload);
       if (error) {
         showErr(error.message);
         btn.disabled = false;
@@ -509,17 +507,18 @@
         return;
       }
 
-      // Fire Zapier webhook if configured for this workspace
+      // Fire Zapier webhook if configured for this workspace (includes reflection)
       if (wsId) {
         const { data: ws } = await sb.from('workspaces').select('webhook_setting').eq('id', wsId).single();
         if (ws?.webhook_setting) {
-          const totalOutreach = payload.outbounds + payload.inbounds + payload.follow_ups_first;
-          const apptRate = totalOutreach ? ((payload.qualified_bookings / totalOutreach) * 100).toFixed(1) + '%' : '—';
+          const totalOutreach = dbPayload.outbounds + dbPayload.inbounds + dbPayload.follow_ups_first;
+          const apptRate = totalOutreach ? ((dbPayload.qualified_bookings / totalOutreach) * 100).toFixed(1) + '%' : '—';
           fetch(ws.webhook_setting, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              ...payload,
+              ...dbPayload,
+              ...reflection,
               total_outreach: totalOutreach,
               appt_booking_rate: apptRate,
               submitted_at: new Date().toISOString(),
