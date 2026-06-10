@@ -92,6 +92,60 @@
     .field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
     .field textarea { resize: vertical; min-height: 72px; }
 
+    /* Yes/No radio chips */
+    .yn-group { display: flex; gap: 10px; }
+    .yn-chip {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      text-align: center;
+      font-size: 14px;
+      transition: .12s;
+    }
+    .yn-chip:hover { border-color: #ea580c; }
+    .yn-chip input { display: none; }
+    .yn-chip.active { background: #ea580c; color: #fff; border-color: #ea580c; }
+
+    /* 1-10 scale */
+    .scale-wrap {
+      display: grid;
+      grid-template-columns: auto repeat(10, 1fr) auto;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 0;
+    }
+    .scale-end-label {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+      padding: 0 4px;
+    }
+    .scale-btn {
+      aspect-ratio: 1;
+      max-width: 40px;
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      display: flex; align-items: center; justify-content: center;
+      transition: .12s;
+      margin: 0 auto;
+    }
+    .scale-btn:hover { border-color: #ea580c; color: #ea580c; }
+    .scale-btn.active { background: #ea580c; color: #fff; border-color: #ea580c; }
+    @media (max-width: 540px) {
+      .scale-btn { font-size: 11px; max-width: none; }
+      .scale-end-label { font-size: 10px; }
+    }
+
     .submit-wrap {
       width: 100%;
       max-width: 560px;
@@ -202,6 +256,65 @@
         <div class="field">
           <label>Your name / handle</label>
           <input type="text" id="f-setter" placeholder="e.g. John" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Reflection</h2>
+      <div class="field-grid cols-1">
+        <div class="field">
+          <label>Win of the day 🏆 *</label>
+          <textarea id="f-win" placeholder="What went well today?"></textarea>
+        </div>
+        <div class="field">
+          <label>Hours worked (give details around your schedule today) *</label>
+          <textarea id="f-hours" placeholder="e.g. 9–12, 1–5"></textarea>
+        </div>
+        <div class="field">
+          <label>I have sent 1 screen recording of convos I had today in Discord under #convo-reviews *</label>
+          <div class="yn-group" id="g-convo-review">
+            <label class="yn-chip" data-val="Yes"><input type="radio" name="convo_review" value="Yes" /> Yes</label>
+            <label class="yn-chip" data-val="No"><input type="radio" name="convo_review" value="No" /> No (do this now before submitting)</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>How well did you manage your time, routine and schedule today? *</label>
+          <div class="scale-wrap" data-scale="time_management">
+            <span class="scale-end-label">Bad</span>
+            <button type="button" class="scale-btn" data-val="1">1</button>
+            <button type="button" class="scale-btn" data-val="2">2</button>
+            <button type="button" class="scale-btn" data-val="3">3</button>
+            <button type="button" class="scale-btn" data-val="4">4</button>
+            <button type="button" class="scale-btn" data-val="5">5</button>
+            <button type="button" class="scale-btn" data-val="6">6</button>
+            <button type="button" class="scale-btn" data-val="7">7</button>
+            <button type="button" class="scale-btn" data-val="8">8</button>
+            <button type="button" class="scale-btn" data-val="9">9</button>
+            <button type="button" class="scale-btn" data-val="10">10</button>
+            <span class="scale-end-label">Great</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>How satisfied are you with your performance today? (Setting skills, problem solving, outbound flow, follow up's, speed to lead, asking for help when needed etc.) *</label>
+          <div class="scale-wrap" data-scale="performance_satisfaction">
+            <span class="scale-end-label">Bad</span>
+            <button type="button" class="scale-btn" data-val="1">1</button>
+            <button type="button" class="scale-btn" data-val="2">2</button>
+            <button type="button" class="scale-btn" data-val="3">3</button>
+            <button type="button" class="scale-btn" data-val="4">4</button>
+            <button type="button" class="scale-btn" data-val="5">5</button>
+            <button type="button" class="scale-btn" data-val="6">6</button>
+            <button type="button" class="scale-btn" data-val="7">7</button>
+            <button type="button" class="scale-btn" data-val="8">8</button>
+            <button type="button" class="scale-btn" data-val="9">9</button>
+            <button type="button" class="scale-btn" data-val="10">10</button>
+            <span class="scale-end-label">Great</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Analyze your day: What can be improved? What went specifically well? What is your plan for improvement? What should you double down on? *</label>
+          <textarea id="f-analysis" placeholder="Be honest with yourself…" style="min-height:120px"></textarea>
         </div>
       </div>
     </div>
@@ -318,6 +431,39 @@
 
     function n(id) { return parseInt(document.getElementById(id).value) || 0; }
 
+    // Yes/No chips
+    document.querySelectorAll('.yn-group').forEach(group => {
+      group.addEventListener('click', e => {
+        const chip = e.target.closest('.yn-chip');
+        if (!chip) return;
+        group.querySelectorAll('.yn-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        const input = chip.querySelector('input');
+        if (input) input.checked = true;
+      });
+    });
+
+    // 1-10 scale buttons
+    document.querySelectorAll('.scale-wrap').forEach(wrap => {
+      wrap.dataset.value = '';
+      wrap.addEventListener('click', e => {
+        const btn = e.target.closest('.scale-btn');
+        if (!btn) return;
+        wrap.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        wrap.dataset.value = btn.dataset.val;
+      });
+    });
+
+    function getScale(name) {
+      const el = document.querySelector(`.scale-wrap[data-scale="${name}"]`);
+      return el?.dataset.value ? parseInt(el.dataset.value) : null;
+    }
+    function getYN(name) {
+      const checked = document.querySelector(`input[name="${name}"]:checked`);
+      return checked?.value || null;
+    }
+
     document.getElementById('submit-btn').addEventListener('click', async () => {
       const btn = document.getElementById('submit-btn');
       btn.disabled = true;
@@ -333,6 +479,14 @@
         workspace_id: wsId || null,
         date,
         setter,
+        // Reflection
+        win_of_day:                     document.getElementById('f-win').value.trim() || null,
+        hours_worked:                   document.getElementById('f-hours').value.trim() || null,
+        convo_review:                   getYN('convo_review'),
+        time_management_rating:         getScale('time_management'),
+        performance_satisfaction_rating:getScale('performance_satisfaction'),
+        day_analysis:                   document.getElementById('f-analysis').value.trim() || null,
+        // Numbers
         outbounds:          n('f-outbounds'),
         inbounds:           n('f-inbounds'),
         follow_ups_first:   n('f-fu-first'),
@@ -384,7 +538,11 @@
       document.getElementById('success-screen').style.display = 'none';
       document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
       document.querySelectorAll('input[type="number"]').forEach(i => i.value = '0');
-      document.getElementById('f-notes').value = '';
+      document.querySelectorAll('textarea').forEach(t => t.value = '');
+      document.querySelectorAll('.scale-btn.active').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.scale-wrap').forEach(w => w.dataset.value = '');
+      document.querySelectorAll('.yn-chip.active').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
     });
   </script>
 </body>
