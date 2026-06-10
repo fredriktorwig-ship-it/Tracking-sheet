@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DM Setting — Daily Form</title>
+  <title>EOD Report — Setting</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,6 +23,7 @@
       width: 100%;
       max-width: 560px;
       margin-bottom: 24px;
+      text-align: center;
     }
     .form-header h1 {
       font-size: 22px;
@@ -175,7 +176,7 @@
 <body>
 
   <div class="form-header">
-    <h1>DM Setting — Daily Stats</h1>
+    <h1>EOD Report</h1>
     <p>Fill this out at the end of your shift. Takes 2 minutes.</p>
   </div>
 
@@ -217,12 +218,8 @@
           <input type="number" id="f-inbounds" value="0" min="0" />
         </div>
         <div class="field">
-          <label>Follow Ups (First Message)</label>
+          <label>Follow Ups (to Outreach)</label>
           <input type="number" id="f-fu-first" value="0" min="0" />
-        </div>
-        <div class="field">
-          <label>Follow Ups (In Convo)</label>
-          <input type="number" id="f-fu-convo" value="0" min="0" />
         </div>
       </div>
     </div>
@@ -339,7 +336,6 @@
         outbounds:          n('f-outbounds'),
         inbounds:           n('f-inbounds'),
         follow_ups_first:   n('f-fu-first'),
-        follow_ups_convo:   n('f-fu-convo'),
         replies:            n('f-replies'),
         qualified_convos:   n('f-qual-convos'),
         pitched_calls:      n('f-pitched'),
