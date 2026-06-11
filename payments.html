@@ -80,7 +80,7 @@
     import { TablePage }   from './js/table.js';
 
     await requireAuth();
-    renderNav('payments');
+    await renderNav('payments');
 
     const page = new TablePage({
       table: 'payments',

@@ -82,7 +82,7 @@
     import { TablePage }   from './js/table.js';
 
     await requireAuth();
-    renderNav('fu-tracker');
+    await renderNav('fu-tracker');
 
     const page = new TablePage({
       table: 'fu_tracker',

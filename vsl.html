@@ -80,7 +80,7 @@
     import { TablePage }   from './js/table.js';
 
     await requireAuth();
-    renderNav('vsl');
+    await renderNav('vsl');
 
     const page = new TablePage({
       table: 'vsl',

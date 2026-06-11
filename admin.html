@@ -332,19 +332,22 @@
         });
       });
 
-      // Change workspace currency (admin only)
+      // Change workspace currency (admin only) — saves to DB, applies to all users
       list.querySelectorAll('[data-currency]').forEach(sel => {
         sel.addEventListener('change', async () => {
           const wsId = sel.dataset.currency;
           const newCode = sel.value;
           const { error } = await sb.from('workspaces').update({ currency: newCode }).eq('id', wsId);
           if (error) { showMsg(error.message, 'err'); return; }
-          // If this is the active workspace, sync the cache + re-apply throughout the app
+          // Sync this admin's cache + reload so currency re-renders everywhere
           const { getActiveWorkspace } = await import('./js/workspace.js');
           if (getActiveWorkspace() === wsId) {
             setCurrencyCode(newCode);
+            showMsg('Currency updated — reloading…');
+            setTimeout(() => window.location.reload(), 600);
+          } else {
+            showMsg('Currency updated for that workspace');
           }
-          showMsg('Currency updated');
         });
       });
 

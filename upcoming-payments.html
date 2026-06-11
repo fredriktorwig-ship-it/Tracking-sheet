@@ -113,7 +113,7 @@
     import { getActiveWorkspace } from './js/workspace.js';
 
     await requireAuth();
-    renderNav('upcoming-payments');
+    await renderNav('upcoming-payments');
 
     const gbp = v => '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const today = new Date(); today.setHours(0,0,0,0);

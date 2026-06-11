@@ -82,7 +82,7 @@
     import { TablePage }   from './js/table.js';
 
     await requireAuth();
-    renderNav('organic');
+    await renderNav('organic');
 
     const page = new TablePage({
       table: 'organic',
