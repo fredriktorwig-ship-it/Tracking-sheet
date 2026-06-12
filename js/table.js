@@ -33,6 +33,24 @@ export class TablePage {
     await this.load();
   }
 
+  // Swap to a different table on the same page (used by sub-tabs)
+  async switchTable({ table, columns, formFields, defaultSort = 'created_at', defaultHidden = [] }) {
+    this.table       = table;
+    this.columns     = columns;
+    this.formFields  = formFields;
+    this.defaultSort = defaultSort;
+    this.editingId   = null;
+    // Reset hidden cols based on stored prefs for this table
+    const stored = localStorage.getItem('hiddenCols_' + table);
+    this.hiddenCols = stored ? new Set(JSON.parse(stored)) : new Set(defaultHidden);
+    // Remove old col picker so it rebuilds with the new columns
+    document.getElementById('col-picker-btn')?.parentElement?.remove();
+    this.renderTableHeaders();
+    this.renderFormFields();
+    this.renderColPicker();
+    await this.load();
+  }
+
   async load() {
     this.setLoading(true);
     let q = sb.from(this.table).select('*').order(this.defaultSort, { ascending: false });

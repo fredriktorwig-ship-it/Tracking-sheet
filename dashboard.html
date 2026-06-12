@@ -641,13 +641,14 @@
       document.getElementById('dash-loading').style.display = 'flex';
       document.getElementById('dash-body').style.display = 'none';
 
-      const [sales, setting, organic, ads, vsl, payments, upcoming] = await Promise.all([
+      const [sales, setting, organic, ads, vsl, payments, microcourse, upcoming] = await Promise.all([
         fetchRange('sales', 'date_of_call'),
         fetchRange('dm_setting', 'date'),
         fetchRange('organic', 'date'),
         fetchRange('ads', 'date'),
         fetchRange('vsl', 'date'),
         fetchRange('payments', 'date'),
+        fetchRange('microcourse', 'date'),
         fetchUpcomingPayments(),
       ]);
 
@@ -668,9 +669,19 @@
       ══════════════════════ */
       html += `<div class="section-hd">Payments</div>`;
 
-      const totalRecorded = payments.reduce((s,r)=>s+num(r.amount),0);
-      html += `<div class="stats-grid cols-2" style="margin-bottom:12px">
+      const highTicketTotal  = payments.reduce((s,r)=>s+num(r.amount),0);
+      const microcourseTotal = microcourse.reduce((s,r)=>s+num(r.amount),0);
+      const totalRecorded    = highTicketTotal + microcourseTotal;
+
+      // Top-line combined total (end-to-end)
+      html += `<div class="stats-grid cols-1" style="margin-bottom:14px">
         ${card('All Recorded Payments', gbp(totalRecorded), 'c-green', true)}
+      </div>`;
+
+      // Breakdown by funnel
+      html += `<div class="stats-grid cols-2" style="margin-bottom:14px">
+        ${card('All Recorded High Ticket', gbp(highTicketTotal), 'c-green')}
+        ${card('All Recorded Microcourse', gbp(microcourseTotal), 'c-purple')}
       </div>`;
 
       const overduePay = upcoming.filter(r=>r.date<today);

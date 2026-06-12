@@ -6,6 +6,37 @@
   <title>Tracking Sheet — Payments</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/shared.css" />
+  <style>
+    /* Sub-tabs */
+    .sub-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .sub-tab {
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      font-family: 'Inter', sans-serif;
+    }
+    .sub-tab:hover { color: var(--text); }
+    .sub-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
 
@@ -26,10 +57,16 @@
       <div class="topbar-left">
         <div>
           <div class="page-title">Payments</div>
-          <div class="page-subtitle">Track cash collected and renewals</div>
+          <div class="page-subtitle">Track cash collected across funnels</div>
         </div>
       </div>
       <button id="add-btn">＋ Add record</button>
+    </div>
+
+    <!-- Sub-tabs: High Ticket vs Microcourse -->
+    <div class="sub-tabs">
+      <button class="sub-tab active" data-tab="payments">High Ticket</button>
+      <button class="sub-tab" data-tab="microcourse">Microcourse</button>
     </div>
 
     <div class="filter-bar">
@@ -82,7 +119,8 @@
     await requireAuth();
     await renderNav('payments');
 
-    const page = new TablePage({
+    // Two configs — swapped when sub-tab clicked
+    const PAYMENTS_CONFIG = {
       table: 'payments',
       defaultSort: 'date',
       columns: [
@@ -99,9 +137,39 @@
         { key: 'utm',           label: 'UTM',           type: 'text' },
         { key: 'notes',         label: 'Notes',         type: 'textarea' },
       ],
-    });
+    };
 
+    const MICROCOURSE_CONFIG = {
+      table: 'microcourse',
+      defaultSort: 'date',
+      columns: [
+        { key: 'date',          label: 'Date',          type: 'date' },
+        { key: 'customer_name', label: 'Customer Name', type: 'text' },
+        { key: 'amount',        label: 'Amount',        type: 'currency' },
+      ],
+      formFields: [
+        { key: 'date',          label: 'Date',          type: 'date' },
+        { key: 'customer_name', label: 'Customer Name', type: 'text' },
+        { key: 'amount',        label: 'Amount',        type: 'currency' },
+      ],
+    };
+
+    const page = new TablePage(PAYMENTS_CONFIG);
     await page.init();
+
+    // Sub-tab switching
+    document.querySelectorAll('.sub-tab').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        const cfg = tab === 'microcourse' ? MICROCOURSE_CONFIG : PAYMENTS_CONFIG;
+        const placeholder = tab === 'microcourse' ? 'Search microcourse…' : 'Search payments…';
+        document.getElementById('search-input').placeholder = placeholder;
+        document.getElementById('search-input').value = '';
+        await page.switchTable(cfg);
+      });
+    });
   </script>
 </body>
 </html>
