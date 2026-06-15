@@ -346,8 +346,6 @@
       { key:'abr_qual',      section:'Setting', label:'ABR (From Qual. Convo)',  red:20, green:35, inverse:false },
       { key:'reply_rate',    section:'Setting', label:'Reply Rate',              red:10, green:20, inverse:false },
       // Landing Page (group)
-      { key:'vsl_conv',      section:'Landing Page', label:'VSL Conversion Rate', red:3,  green:8,  inverse:false },
-      { key:'optin_conv',    section:'Landing Page', label:'Opt-In Conversion',   red:20, green:40, inverse:false },
     ];
 
     function loadKPIs() {
@@ -641,12 +639,9 @@
       document.getElementById('dash-loading').style.display = 'flex';
       document.getElementById('dash-body').style.display = 'none';
 
-      const [sales, setting, organic, ads, vsl, payments, microcourse, upcoming] = await Promise.all([
+      const [sales, setting, payments, microcourse, upcoming] = await Promise.all([
         fetchRange('sales', 'date_of_call'),
         fetchRange('dm_setting', 'date'),
-        fetchRange('organic', 'date'),
-        fetchRange('ads', 'date'),
-        fetchRange('vsl', 'date'),
         fetchRange('payments', 'date'),
         fetchRange('microcourse', 'date'),
         fetchUpcomingPayments(),
@@ -795,75 +790,6 @@
           ${card('Pitched Calls', fmtN(tPitch), 'c-dark')}
         </div>`;
 
-      /* ══════════════════════
-         ORGANIC
-      ══════════════════════ */
-      html += `<div class="section-hd">Organic</div>`;
-
-      const sortedOrg  = [...organic].sort((a,b)=>new Date(a.date)-new Date(b.date));
-      const latestOrg  = sortedOrg[sortedOrg.length-1];
-      const earliestOrg = sortedOrg[0];
-      const totFollow  = latestOrg ? num(latestOrg.total_followers) : 0;
-      const totICP     = latestOrg ? num(latestOrg.icp_followers) : 0;
-      const icpGrowth  = (latestOrg && earliestOrg && sortedOrg.length>1)
-        ? num(latestOrg.icp_followers)-num(earliestOrg.icp_followers) : 0;
-      const icpPerDay  = (icpGrowth/daysInRange).toFixed(1);
-
-      html += `<div class="stats-grid cols-4">
-        ${card('Total Followers', fmtN(totFollow), 'c-green', true)}
-        ${card('ICP Followers', fmtN(totICP), 'c-purple', true)}
-        ${card('Follow to ICP Rate', pct(totICP,totFollow), 'c-dark')}
-        ${card('Average ICP per Day', icpPerDay, 'c-dark')}
-      </div>`;
-
-      /* ══════════════════════
-         PROFILE ADS
-      ══════════════════════ */
-      html += `<div class="section-hd">Profile Ads</div>`;
-
-      const adSpend   = ads.reduce((s,r)=>s+num(r.ad_spend),0);
-      const adBooked  = ads.reduce((s,r)=>s+num(r.booked_calls),0);
-      const adFollow  = ads.reduce((s,r)=>s+num(r.total_followers),0);
-      const adICP     = ads.reduce((s,r)=>s+num(r.qualified_followers),0);
-      const adInbound = ads.reduce((s,r)=>s+num(r.inbounds),0);
-
-      html += `
-        <div class="stats-grid cols-3">
-          ${card('Ad Spend', gbp(adSpend), 'c-red')}
-          ${card('Booked Calls', fmtN(adBooked), 'c-green', true)}
-          ${card('Cost per Booked Call', adBooked ? gbp(adSpend/adBooked) : '—', 'c-dark')}
-        </div>
-        <div class="stats-grid cols-3">
-          ${card('Cost per Follow', adFollow ? gbp(adSpend/adFollow) : '—', 'c-amber')}
-          ${card('Cost per ICP Follow', adICP ? gbp(adSpend/adICP) : '—', 'c-amber')}
-          ${card('Cost per Inbound DM', adInbound ? gbp(adSpend/adInbound) : '—', 'c-amber')}
-        </div>
-        <div class="stats-grid cols-3">
-          ${card('Total Followers', fmtN(adFollow), 'c-dark')}
-          ${card('ICP Followers', fmtN(adICP), 'c-dark')}
-          ${card("Inbound DM's", fmtN(adInbound), 'c-dark')}
-        </div>`;
-
-      /* ══════════════════════
-         LANDING PAGE
-      ══════════════════════ */
-      html += `<div class="section-hd">Landing Page</div>`;
-
-      const visitors  = vsl.reduce((s,r)=>s+num(r.unique_visitors),0);
-      const optIns    = vsl.reduce((s,r)=>s+num(r.opt_ins),0);
-      const vslBooked = vsl.reduce((s,r)=>s+num(r.calls_booked),0);
-
-      html += `
-        <div class="stats-grid cols-4">
-          ${card('Calls Booked', fmtN(vslBooked), 'c-green', true)}
-          ${kpiCard('Conversion Rate (Total)', vslBooked, visitors, 'vsl_conv')}
-          ${card('Conversion Rate (From Opt-Ins)', pct(vslBooked,optIns), 'c-dark')}
-          ${kpiCard('Opt-In Conversion', optIns, visitors, 'optin_conv')}
-        </div>
-        <div class="stats-grid cols-2">
-          ${card('Unique Visitors', fmtN(visitors), 'c-dark')}
-          ${card('Opt Ins', fmtN(optIns), 'c-dark')}
-        </div>`;
 
       document.getElementById('dash-body').innerHTML = html;
       document.getElementById('dash-loading').style.display = 'none';
