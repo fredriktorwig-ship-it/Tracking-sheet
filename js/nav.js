@@ -62,6 +62,9 @@ const PAGES = [
   { id: 'payments',           label: 'Payments',            href: 'payments.html' },
   { id: 'upcoming-payments',  label: 'Upcoming Payments',   href: 'upcoming-payments.html' },
   { id: 'setting',            label: 'Setting',             href: 'setting.html' },
+  { id: 'ads',                label: 'Profile Ads',         href: 'ads.html' },
+  { id: 'organic',            label: 'Organic',             href: 'organic.html' },
+  { id: 'vsl',                label: 'Landing Page',        href: 'vsl.html' },
   { id: 'fu-tracker',         label: 'Follow Up Tracker',   href: 'fu-tracker.html' },
 ];
 
